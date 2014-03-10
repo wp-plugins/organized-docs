@@ -1,23 +1,21 @@
 <?php
 /**
  * Adds Docs Section Contents widget
- *
  * Shows list of documentation articles for 1 item (top-level docs category). Works only on single Docs.
- * 
- * @package		Organized Docs
- * @extends		WP_Widget
- * @author		Isabel Castillo <me@isabelcastillo.com>
- * @license		http://opensource.org/licenses/gpl-license.php GNU Public License
+ * @package	Organized Docs
+ * @extends	WP_Widget
+ * @author	Isabel Castillo <me@isabelcastillo.com>
+ * @licens	http://opensource.org/licenses/gpl-license.php GNU Public License
  */
 
 class DocsSectionContents extends WP_Widget {
 	/**
-	 * Register widget with WordPress.
+	 * Register widget
 	 */
 	public function __construct() {
 		parent::__construct(
-	 		'docs_section_contents', // Base ID
-			__( 'Organized Docs Section Contents', 'organized-docs' ), // Name
+	 		'docs_section_contents',
+			__( 'Organized Docs Section Contents', 'organized-docs' ),
 			array( 'description' => __( 'Shows list of documentation articles for 1 item (top-level docs category). Works on single Docs sidebar.', 'organized-docs' ), )
 		);
 	}
@@ -50,9 +48,11 @@ class DocsSectionContents extends WP_Widget {
 		// get term children
 		$termchildren =  get_term_children( $top_level_parent_term_id, 'isa_docs_category' );
 	
-		foreach ( $termchildren as $child ) {
+		// sort $termchildren by custom subheading_sort_order numbers
+		$sorted_termchildren = $Isa_Organized_Docs->sort_terms( $termchildren, 'subheading_sort_order' );
 
-			$termobject = get_term_by( 'id', $child, 'isa_docs_category' );
+		foreach ( $sorted_termchildren as $child_id => $order ) {
+			$termobject = get_term_by( 'id', $child_id, 'isa_docs_category' );
 			//Display the sub Term information, in open widget container
 			echo '<aside class="widget well"><h3 class="widget-title">' . $termobject->name . '</h3>';
 			echo '<ul>';
@@ -62,35 +62,34 @@ class DocsSectionContents extends WP_Widget {
 						'posts_per_page' => -1,
 						'order' => 'ASC',
 						'tax_query' => array(
-										array(
-											'taxonomy' => 'isa_docs_category',
-											'field' => 'id',
-											'terms' => $termobject->term_id
-											)
-									)
+									array(
+										'taxonomy' => 'isa_docs_category',
+										'field' => 'id',
+										'terms' => $termobject->term_id
+										)
+									),
+						'orderby' => 'meta_value_num',
+						'meta_key' => '_odocs_meta_sortorder_key',
+						'order' => 'ASC'
 				);
 			$postlist = get_posts( $args );
 			foreach ( $postlist as $single_post ) {
 					echo '<li';
 					if( $single_post->ID == $current_single_postID ) 
-						echo ' class="organized-docs-active-side-item"';	// @test end
+						echo ' class="organized-docs-active-side-item"';
 					echo '><a href="' . get_permalink( $single_post->ID ) . '" title="' . esc_attr( $single_post->post_title ) . '">' . $single_post->post_title . '</a></li>';   
 			}  
 					echo '</ul></aside>';
-		} // end foreach ( $termchildren
+		} // end foreach ( $sorted_termchildren
 		
 		echo $after_widget;
 
-	}// end widget
+	}
 
 	/**
 	 * Sanitize widget form values as they are saved.
-	 *
-	 * @see WP_Widget::update()
-	 *
 	 * @param array $new_instance Values just sent to be saved.
 	 * @param array $old_instance Previously saved values from database.
-	 *
 	 * @return array Updated safe values to be saved.
 	 */
 	public function update( $new_instance, $old_instance ) {
@@ -101,9 +100,6 @@ class DocsSectionContents extends WP_Widget {
 
 	/**
 	 * Back-end widget form.
-	 *
-	 * @see WP_Widget::form()
-	 *
 	 * @param array $instance Previously saved values from database.
 	 */
 	public function form( $instance ) {

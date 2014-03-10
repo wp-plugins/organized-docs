@@ -3,7 +3,7 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 1.1.4
+ * Version: 1.1.5
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
@@ -12,22 +12,21 @@
  * 
  * Copyright 2013 - 2014 Isabel Castillo
  * 
- * This file is part of Organized Docs plugin.
+ * This file is part of Organized Docs.
  * 
- * Organized Docs plugin is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- * 
- * Organized Docs plugin is distributed in the hope that it will be useful,
+ * Organized Docs is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * any later version.
+ *
+ * Organized Docs is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
- * along with Organized Docs; if not, If not, see <http://www.gnu.org/licenses/old-licenses/gpl-2.0.html>.
+ * along with Organized Docs. If not, see <http://www.gnu.org/licenses/>.
  */
-
 if(!class_exists('Isa_Organized_Docs')) {
 class Isa_Organized_Docs{
 	public function __construct() {
@@ -39,8 +38,8 @@ class Isa_Organized_Docs{
 			add_action( 'init', array( $this, 'setup_docs_taxonomy'), 0 );
 			add_action( 'init', array( $this, 'create_docs_cpt') );
 			add_action( 'init', array( $this, 'create_docs_menu_item') );
+			add_action ('init', array( $this, 'update_docs_sortorder_meta' ) );
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue') );
-			add_action( 'wp_head', array( $this, 'version' ) );
  			add_filter( 'the_title', array( $this, 'suppress_docs_title' ), 40, 2 );
 			add_filter( 'the_content', array( $this, 'single_doc_content_filter' ) ); 
 			add_action( 'widgets_init', array( $this, 'register_widgets') );
@@ -48,14 +47,20 @@ class Isa_Organized_Docs{
 			add_filter( 'template_include', array( $this, 'docs_template' ) );
 			add_action( 'wp_loaded', array( $this, 'sidebar' ) );
 			add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
-			add_filter( 'parse_query', array( $this, 'sort_asc' ) );
+			add_filter( 'parse_query', array( $this, 'sort_single_docs' ) );
 			add_filter( 'manage_edit-isa_docs_columns', array( $this, 'manage_edit_docs_columns') );
 			add_action( 'manage_isa_docs_posts_custom_column', array( $this, 'manage_docs_columns' ), 10, 2 );
+			add_action( 'isa_docs_category_add_form_fields', array( $this, 'odocs_taxonomy_new_meta_field'), 10, 2 );
+			add_action( 'isa_docs_category_edit_form_fields', array( $this, 'odocs_taxonomy_edit_meta_field'), 10, 2 );
+			add_action( 'edited_isa_docs_category', array( $this, 'save_taxonomy_custom_meta' ), 10, 2 );
+			add_action( 'create_isa_docs_category', array( $this, 'save_taxonomy_custom_meta' ), 10, 2 );
+			add_action( 'add_meta_boxes', array( $this, 'add_sort_order_box' ) );
+			add_action( 'save_post', array( $this, 'save_postdata' ) );
+
     }
 
 	/** 
 	* Only upon plugin activation, flush rewrite rules for custom post types.
-	*
 	* @since 1.0
 	*/
 	public static function activate() { 
@@ -68,7 +73,6 @@ class Isa_Organized_Docs{
 
 	/** 
 	* Upon plugin deactivation, flush rewrite rules
-	*
 	* @since 1.0
 	*/
 	public static function deactivate() { 
@@ -78,7 +82,6 @@ class Isa_Organized_Docs{
 
 	/** 
 	* display support link on plugin page
-	*
 	* @since 1.0
 	* @return void
 	*/
@@ -91,7 +94,6 @@ class Isa_Organized_Docs{
 	}
 	/** 
 	* Load plugin's textdomain
-	*
 	* @since 1.0
 	* @return void
 	*/
@@ -101,24 +103,12 @@ class Isa_Organized_Docs{
 	}
 	/** 
 	* Store plugin name and version as options
-	*
 	* @since 1.0
 	* @return void
 	*/
 	public function admin_init(){
-		$plugin_data = get_plugin_data( __FILE__, false );
-		update_option( 'isa_organized_docs_plugin_version', $plugin_data['Version'] );
-		update_option( 'isa_organized_docs_plugin_name', $plugin_data['Name'] );
-	}
 
-	/** 
-	* Add meta generator tag with plugin name and version to head
-	*
-	* @since 1.0
-	* @return string meta element name=generator
-	*/
-	public function version(){
-		echo '<meta name="generator" content="' . get_option( 'isa_organized_docs_plugin_name' ) . ' ' . get_option( 'isa_organized_docs_plugin_version' ) . '" />' . "\n";
+
 	}
 
 	/** 
@@ -259,7 +249,7 @@ class Isa_Organized_Docs{
 		}
 	    return $template;
 
-	} // end docs_template()
+	}
 
 	/**
 	 * Returns the top category item as a heading for docs. Fetched one way from docs main archive, a different way from taxonomy 'isa_docs_download', and fetched yet a different way from single.
@@ -331,11 +321,10 @@ class Isa_Organized_Docs{
 		
 			// need regular current term id, only used to compare w/ top level term id later
 			$taxonomy = get_query_var( 'taxonomy' );
-		    $queried_object = get_queried_object();
-		    $curr_term_id =  (int) $queried_object->term_id;
+			$queried_object = get_queried_object();
+			$curr_term_id =  (int) $queried_object->term_id;
 			$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
 		
-
 		} else { // if is single, get top level term id on single
 				global $post;
 				$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
@@ -350,25 +339,20 @@ class Isa_Organized_Docs{
 		
 		/** proceed with getting children of top level term, not simply children of current term, unless, of course, the current term is a top level parent **/
 		
-		// get term children
-					
+		// get term children and sort them by custom sort oder
 		$termchildren =  get_term_children( $top_level_parent_term_id, 'isa_docs_category' );
+		$sorted_termchildren = $this->sort_terms( $termchildren, 'subheading_sort_order' );
 	
-		foreach ( $termchildren as $child ) { 
+		foreach ( $sorted_termchildren as $sorted_termchild_id => $sorted_termchild_order ) { 
 
-				$termobject = get_term_by( 'id', $child, 'isa_docs_category' );
-
-		        $docs_menu .= '<li class="menu-item';
+				$termobject = get_term_by( 'id', $sorted_termchild_id, 'isa_docs_category' );
+				$docs_menu .= '<li class="menu-item';
 		
 				// if current term id matches an id of a child term in menu, then give it active class
-		
 				if ( $termobject->term_id == $curr_term_id_as_int ) {
-								
 					$docs_menu .= ' active-docs-item current_page_item';
-						
-			} // if no match, proceed without class
-		
-			$docs_menu .= '"><a href="' . get_term_link( $termobject ) . '" title="' . esc_attr( $termobject->name ) . '">' . $termobject->name . '</a></li>';
+				}
+				$docs_menu .= '"><a href="' . get_term_link( $termobject ) . '" title="' . esc_attr( $termobject->name ) . '">' . $termobject->name . '</a></li>';
 		
 		}		
 		
@@ -380,13 +364,12 @@ class Isa_Organized_Docs{
 
 	/** 
 	* Returns ID of top-level parent term of the passed term, or returns the passed term if it is a top-level term.
-	*
 	* @param    string      $termid      Term ID to be checked
 	* @return   string      $termParent  ID of top-level parent term
 	* @since 1.0
 	*/
 	public function isa_term_top_parent_id( $termid ) {
-
+		$termParent = '';
 		while ($termid) {
 			$term = get_term( $termid, 'isa_docs_category' );
 
@@ -479,7 +462,6 @@ class Isa_Organized_Docs{
 
 	/**
 	 * get all current registered sidebars
-	 *
 	 * @since 1.0
 	 * @return array
 	 */
@@ -499,7 +481,6 @@ class Isa_Organized_Docs{
 
 	/**
 	* gets all current registered sidebar ids
-	*
 	* @since 1.0
 	* @return array
 	*/
@@ -521,7 +502,6 @@ class Isa_Organized_Docs{
 
 	/**
 	 * Registers the custom taxonomies for the docs custom post type
-	 *
 	 * @since 1.0
 	 * @return void
 	 */
@@ -546,20 +526,14 @@ class Isa_Organized_Docs{
 			'show_ui'           => true,
 			'show_admin_column' => true,
 			'rewrite'			=> array(
-										'slug'		=> 'docs/category', 
-										'with_front'	=> false,
-										'hierarchical'	=> true ),
+								'slug'		=> 'docs/category', 
+								'with_front'	=> false,
+								'hierarchical'	=> true ),
 		)
 		);
 		register_taxonomy( 'isa_docs_category', array('isa_docs'), $category_args );
 		register_taxonomy_for_object_type( 'isa_docs_category', 'isa_docs' );
 	}
-
-	public function sort_asc($query) {
-		if( is_tax( 'isa_docs_category' ) ) {
-		    $query->query_vars['order'] = 'ASC';
-	    }
-    }
 
 	/**
 	 * Add Parent column to Docs admin
@@ -588,24 +562,301 @@ class Isa_Organized_Docs{
 			case 'parentcat' :
 				// get the parent cat
 				$doc_categories = wp_get_object_terms( $post_id, 'isa_docs_category' );
-				$first_cat = $doc_categories[0]; // first category
-				$curr_term_id = $first_cat->term_id;
-				$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+
+				if(!empty($doc_categories)){
+					if(!is_wp_error( $doc_categories )){
+						$first_cat = $doc_categories[0]; // first category
+		
+						$curr_term_id = $first_cat->term_id;
+						$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+							
+						$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
 					
-				$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
-			
-				$top_term_slug = $top_term->slug;
-				$top_term_name = $top_term->name;
-
-				$path = 'edit.php?post_type=isa_docs&isa_docs_category=' . $top_term_slug;
-				$top_term_sort_link = admin_url( $path );
-
-				echo '<a href="' . $top_term_sort_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
+						$top_term_slug = $top_term->slug;
+						$top_term_name = $top_term->name;
+		
+						$path = 'edit.php?post_type=isa_docs&isa_docs_category=' . $top_term_slug;
+						$top_term_sort_link = admin_url( $path );
+		
+						echo '<a href="' . $top_term_sort_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
+					}
+				}
 			
 				break;
 			default :
 				break;
 		}
+	}
+
+	/** 
+	 * To the "Add New Category" page for Docs categories, add sort order fields.
+	 * @since 1.1.5
+	 */
+
+	public function odocs_taxonomy_new_meta_field() {
+		// this will add the custom meta field to the add new term page
+		?>
+		<div class="form-field">
+			<label for="term_meta[main_doc_item_sort_order]"><?php _e( 'Sort Order Number for a Top-level Item', 'organized-docs' ); ?></label>
+			<input type="text" name="term_meta[main_doc_item_sort_order]" id="term_meta[main_doc_item_sort_order]" value="">
+			<p class="description"><?php _e( 'If this is a Top-level Item (a main Docs Item, i.e. the item that has docs), give this item a number to order it on the main Docs page. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Top-level Items later without having to change all current numbers. <em>Leave blank if this is is not a Top-level Item.</em>', 'organized-docs' ); ?></p>
+		</div>
+		<div class="form-field">
+			<label for="term_meta[subheading_sort_order]"><?php _e( 'Sort Order Number for Sub-heading', 'organized-docs' ); ?></label>
+			<input type="text" name="term_meta[subheading_sort_order]" id="term_meta[subheading_sort_order]" value="">
+			<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new docs later without having to change all current numbers. <em>Leave blank if this is is not a sub-heading.</em>', 'organized-docs' ); ?></p>
+		</div>
+	<?php
+	}
+
+	/** 
+	 * To the "Edit Category" page for Docs categories, add sort order fields and populate any saved values for them.
+	 * @since 1.1.5
+	 */
+	public function odocs_taxonomy_edit_meta_field($term) {
+ 
+		// put the term ID into a variable
+		$t_id = $term->term_id;
+	 
+		// retrieve the existing value(s) for this meta field. This returns an array
+		$term_meta = get_option( "taxonomy_$t_id" ); 
+
+		$value_sub = isset($term_meta['subheading_sort_order']) ? esc_attr( $term_meta['subheading_sort_order'] ) : '';
+		$value_main = isset($term_meta['main_doc_item_sort_order']) ? esc_attr( $term_meta['main_doc_item_sort_order'] ) : '';
+
+?>
+		<tr class="form-field">
+		<th scope="row" valign="top"><label for="term_meta[main_doc_item_sort_order]"><?php _e( 'Sort Order Number for a Top-level Item', 'organized-docs' ); ?></label></th>
+			<td>
+				<input type="text" name="term_meta[main_doc_item_sort_order]" id="term_meta[main_doc_item_sort_order]" value="<?php echo $value_main; ?>">
+				<p class="description"><?php _e( 'If this is a Top-level Item (a main Docs Item, i.e. the item that has docs), give this item a number to order it on the main Docs page. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Top-level Items later without having to change all current numbers. <em>Leave blank if this is is not a Top-level Item.</em>','organized-docs' ); ?></p>
+			</td>
+		</tr>
+		<tr class="form-field">
+		<th scope="row" valign="top"><label for="term_meta[subheading_sort_order]"><?php _e( 'Sort Order Number for Sub-heading', 'organized-docs' ); ?></label></th>
+			<td>
+				<input type="text" name="term_meta[subheading_sort_order]" id="term_meta[subheading_sort_order]" value="<?php echo $value_sub; ?>">
+				<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new docs later without having to change all current numbers. <em>Leave blank if this is is not a sub-heading.</em>','organized-docs' ); ?></p>
+			</td>
+		</tr>
+	<?php
+	}
+
+	/** 
+	 * Save sort order fields callback function.
+	 * @since 1.1.5
+	 */
+	public function save_taxonomy_custom_meta( $term_id ) {
+		if ( isset( $_POST['term_meta'] ) ) {
+			$t_id = $term_id;
+			$term_meta = get_option( "taxonomy_$t_id" );
+			$cat_keys = array_keys( $_POST['term_meta'] );
+			foreach ( $cat_keys as $key ) {
+				if ( isset ( $_POST['term_meta'][$key] ) ) {
+					$term_meta[$key] = $_POST['term_meta'][$key];
+				}
+			}
+			// Save the option array.
+			update_option( "taxonomy_$t_id", $term_meta );
+		}
+	}  
+
+	/**
+	 * Sort terms by a custom term_meta key
+	 * 
+	 * @param array $term_ids to sort
+	 * @param int|string $term_meta_key key that holds our custom term_meta value
+	 * @return array
+	 * @since 1.1.5
+	 */
+	public function sort_terms( $term_ids, $term_meta_key ) {
+
+		$ordered_terms = array();
+		$new_order_numbers = array();
+		$unordered_terms = array();
+		$no_order_numbers = array();
+
+		// get sort order numbers for all term ids
+		foreach ( $term_ids as $term_id ) {
+			if ( $taxonomy_sort = get_option( "taxonomy_$term_id" ) ) {
+
+				// get sort value
+				$sort_value = isset($taxonomy_sort[$term_meta_key]) ? esc_attr( $taxonomy_sort[$term_meta_key] ) : '';
+				if ( ! empty($sort_value) )  {
+					// has sort order
+					$ordered_terms[] = $term_id;
+					$new_order_numbers[] = ( int ) $sort_value;
+				} else {
+					// sort value is empty
+					$unordered_terms[] = $term_id;
+					$no_order_numbers[] = 99999999; // need this in order to have equal count of keys and values for later
+				}
+	
+			}
+		}
+		
+		// Only sort by sort order if there are items to sort, otherwise return the original array
+		if ( count( $ordered_terms ) > 0 ) {
+
+			// if we have any unordered, add them to the end of list
+			if ( count( $unordered_terms ) > 0 ) {
+
+				// build keys list, adding unordered terms to the end of list
+				foreach ( $unordered_terms as $unordered_term ) {
+					array_push( $ordered_terms, $unordered_term );
+				}
+
+				// build values list, adding unordered term values to the end of list
+				foreach ( $no_order_numbers as $no_order_number ) {
+					array_push( $new_order_numbers, $no_order_number );
+				}
+
+			}
+
+			// combine term ids with their order numbers.
+			$new_ordered_terms = array_combine($ordered_terms, $new_order_numbers);
+
+			// sort by value of order number ASC
+			asort($new_ordered_terms);
+			return $new_ordered_terms;
+
+		} else {
+
+			// No items to sort, so return the original array
+			// but add the id as the key since we'll need id as key later.
+			$keys = $term_ids;
+			$values = $term_ids;
+			return array_combine($keys, $values);
+		}
+
+	}
+
+	/**
+	 * Adds a sort-order meta box to the Docs edit screen.
+	 * @since 1.1.5
+	 */
+	public function add_sort_order_box() {
+		add_meta_box(
+			'odocs_sectionid',
+			__( 'Sort Order', 'organized-docs' ),
+			array( $this, 'odocs_sort_oder_box' ),
+			'isa_docs',
+			'side',
+			'core'
+		);
+	}
+
+	/**
+	 * Prints the sort-order meta box content.
+	 * @param WP_Post $post The object for the current post/page.
+	 * @since 1.1.5
+	 */
+	public function odocs_sort_oder_box( $post ) {
+	
+		wp_nonce_field( 'odocs_sort_oder_box', 'odocs_sort_oder_box_nonce' );
+	
+		/*
+		 * Use get_post_meta() to retrieve an existing value
+		 * from the database and use the value for the form.
+		 */
+		$value = get_post_meta( $post->ID, '_odocs_meta_sortorder_key', true );
+			
+		echo '<label for="odocs_single_sort_order">';
+		       _e( "Give this Doc a number to order it under its Sub-heading. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Docs later without having to change all current numbers.", 'organized-docs' );
+		echo '</label> ';
+		echo '<input type="text" id="odocs_single_sort_order" name="odocs_single_sort_order" value="' . esc_attr( $value ) . '" size="25" />';
+	
+	}
+
+	/**
+	 * When the post is saved, saves our custom data.
+	 * @param int $post_id The ID of the post being saved.
+	 * @since 1.1.5
+	 */
+	public function save_postdata( $post_id ) {
+	
+		/*
+		* We need to verify this came from the our screen and with proper authorization,
+		* because save_post can be triggered at other times.
+		*/
+	
+		if ( ! isset( $_POST['odocs_sort_oder_box_nonce'] ) )
+			return $post_id;
+		$nonce = $_POST['odocs_sort_oder_box_nonce'];
+		if ( ! wp_verify_nonce( $nonce, 'odocs_sort_oder_box' ) )
+			return $post_id;
+	
+		// If this is an autosave, our form has not been submitted, so we don't want to do anything.
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) 
+			return $post_id;
+		
+		// Check the user's permissions.
+		if ( 'isa_docs' == $_POST['post_type'] ) {
+			
+			if ( ! current_user_can( 'edit_page', $post_id ) )
+				return $post_id;
+			  
+		} else {
+			
+			if ( ! current_user_can( 'edit_post', $post_id ) )
+				return $post_id;
+		}
+			
+		/* OK, its safe for us to save the data now. */
+		$odocs_data = sanitize_text_field( $_POST['odocs_single_sort_order'] );
+		update_post_meta( $post_id, '_odocs_meta_sortorder_key', $odocs_data );
+	}
+
+
+	/**
+	 * Sort Single Docs on the regular archive page by sort order number key
+	 * @uses is_post_type_archive()
+	 * @uses is_main_query()
+	 * @since 1.1.5
+	 */
+	public function sort_single_docs($query) {
+		if( is_tax('isa_docs_category') && $query->is_main_query() && isset( $query->query_vars['meta_key'] ) ) {
+			$query->query_vars['orderby'] = 'meta_value_num';
+			$query->query_vars['meta_key'] = '_odocs_meta_sortorder_key';
+			$query->query_vars['order'] = 'ASC';
+		}
+		return $query;
+	}
+
+	/**
+	 * For backwards compatibility, give all single Docs posts a default sort-order number of 99999
+	 * @since 1.1.5
+	 * @todo remove this back compatibility in version 1.1.7
+	 */
+	public function update_docs_sortorder_meta() {
+
+		global $post;
+ 
+		// Run this update only once
+		if (	get_option( 'odocs_update_sortorder_meta' ) != 'completed' ) {
+
+			$args = array(	'post_type' => 'isa_docs', 
+						'posts_per_page' => -1,
+			);
+			$all_docs = get_posts( $args );
+	
+			foreach ($all_docs as $doc) {
+				$sort_order_value_check = get_post_meta( $doc->ID, '_odocs_meta_sortorder_key', true );
+
+				// if sort order value is empty, assign a default value
+				if( empty( $sort_order_value_check ) ) {
+					update_post_meta($doc->ID, '_odocs_meta_sortorder_key', 99999);
+				}
+			}
+			wp_reset_postdata();
+
+			// for cleanup, remove these options
+			delete_option( 'isa_organized_docs_plugin_version' );
+			delete_option( 'isa_organized_docs_plugin_name' );
+
+			update_option( 'odocs_update_sortorder_meta', 'completed' );
+		}
+
 	}
 }
 }
