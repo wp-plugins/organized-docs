@@ -3,7 +3,7 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 1.1.9
+ * Version: 1.1.10
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
@@ -117,9 +117,9 @@ class Isa_Organized_Docs{
 			        	'capability_type' => 'post',
 			        	'hierarchical' => false,
 			        	'rewrite' => array(
-								'slug' => __( 'docs', 'organized-docs' ),
-								'with_front' => false,
-	
+/* translators: URL slug */
+							'slug' => _x( 'docs', 'URL slug', 'organized-docs' ),
+							'with_front' => false,
 						),
 			        	'exclude_from_search' => false,
 		        		'labels' => array(
@@ -217,7 +217,7 @@ class Isa_Organized_Docs{
 			global $post;
 			$docscontent = $this->organized_docs_section_heading();
 			$docscontent .= $this->organized_docs_content_nav();
-			$docscontent .= '<p id="odd-print-button"><i class="fa fa-print"></i> <a href="javascript:window.print()" class="button">Print</a></p>';
+			$docscontent .= '<p id="odd-print-button"><i class="fa fa-print"></i> <a href="javascript:window.print()" class="button">' . __( 'Print', 'organized-docs' ) . '</a></p>';
  			$docscontent .= '<h1 class="entry-title">' . single_post_title('', false) . '</h1>';
 			$docscontent .= $content;
 			return $docscontent;
@@ -255,8 +255,8 @@ class Isa_Organized_Docs{
 			// get top level parent term on custom taxonomy archive
 			$heading = '<h2 id="isa-docs-item-title" class="entry-title">';
 			$taxonomy = get_query_var( 'taxonomy' );
-		    $queried_object = get_queried_object();
-		    $curr_term_id =  (int) $queried_object->term_id;
+			$queried_object = get_queried_object();
+			$curr_term_id =  (int) $queried_object->term_id;
 
 			$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
 			$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
@@ -266,8 +266,6 @@ class Isa_Organized_Docs{
 		
 			$heading .= '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
 			$heading .= '</h2>';
-
-
 
 		} elseif ( is_post_type_archive( 'isa_docs' ) ) { 
 			$heading = apply_filters( 'od_docs_main_title', '<h1 id="isa-docs-main-title" class="entry-title">Docs</h1>' );
@@ -381,7 +379,7 @@ class Isa_Organized_Docs{
 		include ISA_ORGANIZED_DOCS_PATH . 'includes/widget.php';
 		register_widget('DocsSectionContents');
 	
-	} // end register_widget
+	}
 
 	/**
 	 * register sidebar for docs
@@ -513,13 +511,14 @@ class Isa_Organized_Docs{
 		
 		$category_args = apply_filters( 'isa_docs_category_args', array(
 			'hierarchical'		=> true,
-			'labels'			=>	apply_filters('isa_docs_category_labels', $category_labels),
+			'labels'			=> apply_filters('isa_docs_category_labels', $category_labels),
 			'show_ui'           => true,
 			'show_admin_column' => true,
 			'rewrite'			=> array(
-								'slug'		=> 'docs/category', 
-								'with_front'	=> false,
-								'hierarchical'	=> true ),
+/* translators: URL slug */
+						'slug' => _x( 'docs/category', 'URL slug', 'organized-docs' ),
+						'with_front'	=> false,
+						'hierarchical'	=> true ),
 		)
 		);
 		register_taxonomy( 'isa_docs_category', array('isa_docs'), $category_args );
@@ -572,7 +571,6 @@ class Isa_Organized_Docs{
 						echo '<a href="' . $top_term_sort_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
 					}
 				}
-			
 				break;
 			default :
 				break;
@@ -590,12 +588,12 @@ class Isa_Organized_Docs{
 		<div class="form-field">
 			<label for="term_meta[main_doc_item_sort_order]"><?php _e( 'Sort Order Number for a Top-level Item', 'organized-docs' ); ?></label>
 			<input type="text" name="term_meta[main_doc_item_sort_order]" id="term_meta[main_doc_item_sort_order]" value="">
-			<p class="description"><?php _e( 'If this is a Top-level Item (a main Docs Item, i.e. the item that has docs), give this item a number to order it on the main Docs page. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Top-level Items later without having to change all current numbers. <em>Leave blank if this is is not a Top-level Item.</em>', 'organized-docs' ); ?></p>
+			<p class="description"><?php _e( 'If this is a Top-level Item (a main Docs Item, i.e. the item that has docs), give this item a number to order it on the main Docs page. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Top-level Items later without having to change all current numbers.', 'organized-docs' ) . ' <em>' . _e( 'Leave blank if this is is not a Top-level Item.', 'organized-docs' ) . '</em>'; ?></p>
 		</div>
 		<div class="form-field">
 			<label for="term_meta[subheading_sort_order]"><?php _e( 'Sort Order Number for Sub-heading', 'organized-docs' ); ?></label>
 			<input type="text" name="term_meta[subheading_sort_order]" id="term_meta[subheading_sort_order]" value="">
-			<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new sub-headings later without having to change all current numbers. <em>Leave blank if this is is not a sub-heading.</em>', 'organized-docs' ); ?></p>
+			<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new sub-headings later without having to change all current numbers.', 'organized-docs' ) . ' <em>' . _e( 'Leave blank if this is is not a sub-heading.', 'organized-docs' ) . '</em>'; ?></p>
 		</div>
 	<?php
 	}
@@ -620,14 +618,14 @@ class Isa_Organized_Docs{
 		<th scope="row" valign="top"><label for="term_meta[main_doc_item_sort_order]"><?php _e( 'Sort Order Number for a Top-level Item', 'organized-docs' ); ?></label></th>
 			<td>
 				<input type="text" name="term_meta[main_doc_item_sort_order]" id="term_meta[main_doc_item_sort_order]" value="<?php echo $value_main; ?>">
-				<p class="description"><?php _e( 'If this is a Top-level Item (a main Docs Item, i.e. the item that has docs), give this item a number to order it on the main Docs page. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Top-level Items later without having to change all current numbers. <em>Leave blank if this is is not a Top-level Item.</em>','organized-docs' ); ?></p>
+				<p class="description"><?php _e( 'If this is a Top-level Item (a main Docs Item, i.e. the item that has docs), give this item a number to order it on the main Docs page. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new Top-level Items later without having to change all current numbers.', 'organized-docs' ) . ' <em>' . _e( 'Leave blank if this is is not a Top-level Item.', 'organized-docs' ) . '</em>'; ?></p>
 			</td>
 		</tr>
 		<tr class="form-field">
 		<th scope="row" valign="top"><label for="term_meta[subheading_sort_order]"><?php _e( 'Sort Order Number for Sub-heading', 'organized-docs' ); ?></label></th>
 			<td>
 				<input type="text" name="term_meta[subheading_sort_order]" id="term_meta[subheading_sort_order]" value="<?php echo $value_sub; ?>">
-				<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new sub-headings later without having to change all current numbers. <em>Leave blank if this is is not a sub-heading.</em>','organized-docs' ); ?></p>
+				<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new sub-headings later without having to change all current numbers.', 'organized-docs' ) . ' <em>'. _e( 'Leave blank if this is is not a sub-heading.', 'organized-docs' ) . '</em>'; ?></p>
 			</td>
 		</tr>
 	<?php
@@ -684,7 +682,6 @@ class Isa_Organized_Docs{
 					$unordered_terms[] = $term_id;
 					$no_order_numbers[] = 99999999; // need this in order to have equal count of keys and values for later
 				}
-	
 			}
 		}
 		
@@ -719,7 +716,9 @@ class Isa_Organized_Docs{
 			// but add the id as the key since we'll need id as key later.
 			$keys = $term_ids;
 			$values = $term_ids;
-			return array_combine($keys, $values);
+			if( $keys && $values ) {
+				return array_combine($keys, $values);
+			}
 		}
 
 	}
@@ -885,14 +884,14 @@ class Isa_Organized_Docs{
 	/**
 	 * For backwards compatibility, give all single Docs posts a default sort-order number of 99999
 	 * @since 1.1.8
-	 * @todo remove this back compatibility in version 1.2.0
+	 * @todo remove this back compatibility in version 1.2.1
 	 */
 	public function update_docs_sort_order_post_meta() {
 
 		global $post;
  
 		// Run this update only once
-		if (	get_option( 'odocs_update_sortorder_post_meta' ) != 'completed' ) {
+		if (	get_option( 'odocs_update_sortorder_postmeta' ) != 'completed' ) {
 
 			$args = array(	'post_type' => 'isa_docs', 
 						'posts_per_page' => -1,
@@ -915,8 +914,9 @@ class Isa_Organized_Docs{
 			delete_option( 'odocs_update_custom_tax_terms_meta' );
 			delete_option( 'odocs_bugfix_update_term_meta' );
 			delete_option( 'odocs_update_sortorder_meta' );
+			delete_option(	'odocs_update_sortorder_post_meta' );
 
-			update_option( 'odocs_update_sortorder_post_meta', 'completed' );
+			update_option( 'odocs_update_sortorder_postmeta', 'completed' );
 		}
 
 	}
