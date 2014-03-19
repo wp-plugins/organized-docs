@@ -3,7 +3,7 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 1.1.10
+ * Version: 1.2.0
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
@@ -38,7 +38,7 @@ class Isa_Organized_Docs{
 			add_action( 'init', array( $this, 'setup_docs_taxonomy'), 0 );
 			add_action( 'init', array( $this, 'create_docs_cpt') );
 			add_action( 'init', array( $this, 'create_docs_menu_item') );
-			add_action ('init', array( $this, 'update_docs_sort_order_post_meta' ) );
+			add_action( 'init', array( $this, 'update_docs_sort_order_post_meta' ) );
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue') );
  			add_filter( 'the_title', array( $this, 'suppress_docs_title' ), 40, 2 );
 			add_filter( 'the_content', array( $this, 'single_doc_content_filter' ) ); 
@@ -187,7 +187,6 @@ class Isa_Organized_Docs{
 		add_filter('wp_nav_menu_items', array( $this, 'docs_menu_link' ), 10, 2);
 		add_filter( 'wp_page_menu', array( $this, 'docs_page_menu_link' ), 95 );
 	}
-	
 	/**
 	 * Remove default title on single Docs, to add it later below the docs menu
 	 *
@@ -217,7 +216,18 @@ class Isa_Organized_Docs{
 			global $post;
 			$docscontent = $this->organized_docs_section_heading();
 			$docscontent .= $this->organized_docs_content_nav();
-			$docscontent .= '<p id="odd-print-button"><i class="fa fa-print"></i> <a href="javascript:window.print()" class="button">' . __( 'Print', 'organized-docs' ) . '</a></p>';
+
+			if ( ! get_option('od_hide_print_link') ) {
+				$docscontent .= '<p id="odd-print-button">';
+
+				if ( ! get_option('od_hide_printer_icon') ) {
+					$docscontent .= '<i class="fa fa-print"></i> ';
+				}
+
+				$docscontent .= '<a href="javascript:window.print()" class="button">' . __( 'Print', 'organized-docs' ) . '</a></p>';
+
+			}
+
  			$docscontent .= '<h1 class="entry-title">' . single_post_title('', false) . '</h1>';
 			$docscontent .= $content;
 			return $docscontent;
@@ -385,7 +395,7 @@ class Isa_Organized_Docs{
 	 * register sidebar for docs
 	 * @since 1.0
 	 */
-	function sidebar(){
+	public function sidebar(){
 		register_sidebar(array(
 	        'id' => 'isa_organized_docs',
 	        'name' => __( 'Docs Widget Area', 'organized-docs' ),
@@ -397,11 +407,36 @@ class Isa_Organized_Docs{
 	    ));
 	}
 
-	/** 
-	* Switch out default sidebar for our custom Docs sidebar, only on single Docs. Exclude sidebar-1 for Twenty Thirteen theme to avoid having footer show a duplicate Docs widget.
-	* @todo Rather than exclude sidebar-1, may possibly have to exclude some custom widget id for custom themes
+
+	/**
+	* Get custom sidebar ids to exclude from settings
+	* @since 1.2.0
+	*/
+
+	public function get_custom_sidebar_ids(){
+
+		$ids_list = get_option('od_sidebar_ids_to_exclude');
+
+		$ids_array = explode(',', $ids_list);
+
+		// trim
+
+		$ids_array_trimmed = array();
+
+		foreach ($ids_array as $id) {
+
+			$ids_array_trimmed[] = trim($id);
+
+		}
+
+		return $ids_array_trimmed;
+	}
+
+	/**
+	* Switch out default sidebar for our custom Docs sidebar, only on single Docs. Exclude sidebar-1 for Twenty Thirteen, sideber-3 for Twenty Fourteen theme, and any custom excluded sidebars from settings to avoid showing duplicate Table of Contents widgets.
 	* @uses is_single()
 	* @uses get_post_type()
+	* @uses get_custom_sidebar_ids()
 	* @since 1.0
 	* @return void
 	*/
@@ -436,6 +471,23 @@ class Isa_Organized_Docs{
 							continue;
 						}
 
+					$continue = '';
+
+					// exclude custom sidebar ids
+					$exclude_ids = $this->get_custom_sidebar_ids();
+					if ( $exclude_ids ) {
+						foreach ($exclude_ids as $exclude_id) {
+					
+							if ( $exclude_id == $key ) {
+								$continue = true;
+							}
+						}
+
+					}
+
+					if ( $continue ) {
+							continue;
+					}
 
 					$widgets[$key] = $widgets['isa_organized_docs'];
 
@@ -444,7 +496,7 @@ class Isa_Organized_Docs{
 
 		    return $widgets;
 		} else {
-			// not on singe Docs, get regular sidebar
+			// not on single Docs, get regular sidebar
 		    return $widgets;
 		}
 	}
@@ -850,36 +902,103 @@ class Isa_Organized_Docs{
 	 	
 	 	add_settings_section(
 			'od_main_setting_section',
-			__( 'Uninstall Settings', 'organized-docs' ),
+			__( 'Main Settings', 'organized-docs' ),
 			array( $this, 'main_setting_section_callback' ),
 			'organized-docs-settings'
 		);
- 	
+
+	 	add_settings_section(
+			'od_uninstall_setting_section',
+			__( 'Uninstall Settings', 'organized-docs' ),
+			array( $this, 'uninstall_setting_section_callback' ),
+			'organized-docs-settings'
+		);
+	 	add_settings_field(
+			'od_sidebar_ids_to_exclude',
+			__( 'Sidebar IDs To Exclude', 'organized-docs' ),
+			array( $this, 'exclude_sidebars_setting_callback' ),
+			'organized-docs-settings',
+			'od_main_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_sidebar_ids_to_exclude' );
+
+	 	add_settings_field(
+			'od_hide_printer_icon',
+			__( 'Remove Printer Icon', 'organized-docs' ),
+			array( $this, 'hide_printer_icon_setting_callback' ),
+			'organized-docs-settings',
+			'od_main_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_hide_printer_icon' );
+
+	 	add_settings_field(
+			'od_hide_print_link',
+			__( 'Remove Print Link', 'organized-docs' ),
+			array( $this, 'hide_print_link_setting_callback' ),
+			'organized-docs-settings',
+			'od_main_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_hide_print_link' );
 	 	add_settings_field(
 			'od_delete_data_on_uninstall',
 			__( 'Remove Data on Uninstall?', 'organized-docs' ),
 			array( $this, 'delete_data_setting_callback' ),
 			'organized-docs-settings',
-			'od_main_setting_section'
+			'od_uninstall_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_delete_data_on_uninstall' );
+
 	}
 
 	/**
 	 * Main Settings section callback
-	 * @since 1.1.9
+	 * @since 1.2.0
 	 */
 	public function main_setting_section_callback() {
- 		echo '<p>' . __('These settings refer to when you uninstall (delete) the plugin. This does not refer to simply deactivating the plugin.', 'organized-docs') . '</p>';
+		return true;
 	}
 
+	/**
+	 * Uninstall Settings section callback
+	 * @since 1.1.9
+	 */
+	public function uninstall_setting_section_callback() {
+ 		echo '<p>' . __('This setting refers to when you uninstall (delete) the plugin. This does not refer to simply deactivating the plugin.', 'organized-docs') . '</p>';
+	}
+
+	/**
+	 * Callback function for setting to exclude sidebar ids
+	 * @since 1.2.0
+	 */
+	public function exclude_sidebars_setting_callback() {
+
+		$value = get_option('od_sidebar_ids_to_exclude');
+		echo '<input name="od_sidebar_ids_to_exclude" id="od_sidebar_ids_to_exclude" type="text" value="' . esc_textarea( $value ). '" class="regular-text" /><p class="description">' . __( 'If the Table of Contents widget appears multiple times on the single Docs page, enter your "sidebar IDs" to exclude here, separated by a comma.', 'organized-docs' ) . '</p>';
+	}
+
+	/**
+	 * Callback function for setting to hide printer icon
+	 * @since 1.2.0
+	 */
+	public function hide_printer_icon_setting_callback() {
+		echo '<label for="od_hide_printer_icon"><input name="od_hide_printer_icon" id="od_hide_printer_icon" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_hide_printer_icon' ), false ) . ' /> ' . __( 'Check this box to remove only the printer icon from single Docs, but leave the Print link.', 'organized-docs' ) . '</label>';
+	}
+
+	/**
+	 * Callback function for setting to hide print link
+	 * @since 1.2.0
+	 */
+	public function hide_print_link_setting_callback() {
+		echo '<label for="od_hide_print_link"><input name="od_hide_print_link" id="od_hide_print_link" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_hide_print_link' ), false ) . ' /> ' . __( 'Check this box to remove the Print link altogether from single Docs.', 'organized-docs' ) . '</label>';
+	}
 	/**
 	 * Callback function for setting to remove data on uninstall
 	 * @since 1.1.9
 	 */
 	public function delete_data_setting_callback() {
-		echo '<input name="od_delete_data_on_uninstall" id="od_delete_data_on_uninstall" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_delete_data_on_uninstall' ), false ) . ' /> ' . __( 'Check this box if you would like Organized Docs to completely remove all of its data when the plugin is deleted. This would include all Docs posts, Docs categories, subheadings, and sort order numbers.', 'organized-docs' );
+		echo '<label for="od_delete_data_on_uninstall"><input name="od_delete_data_on_uninstall" id="od_delete_data_on_uninstall" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_delete_data_on_uninstall' ), false ) . ' /> ' . __( 'Check this box if you would like Organized Docs to completely remove all of its data when the plugin is deleted. This would include all Docs posts, Docs categories, subheadings, and sort order numbers.', 'organized-docs' ) . '</label>';
 	}
+
 
 	/**
 	 * For backwards compatibility, give all single Docs posts a default sort-order number of 99999
@@ -920,8 +1039,13 @@ class Isa_Organized_Docs{
 		}
 
 	}
+
 }
 }
 $Isa_Organized_Docs = new Isa_Organized_Docs();
 register_deactivation_hook(__FILE__, array('Isa_Organized_Docs', 'deactivate')); 
 register_activation_hook(__FILE__, array('Isa_Organized_Docs', 'activate'));
+
+if( defined('ISA_ORGANIZED_DOCS_PATH') ) {
+	include_once plugin_dir_path(__FILE__) . 'includes/custom.php';
+}

@@ -1,4 +1,5 @@
 ﻿/* main docs page */
+.isa-docs-archive-content{margin:36px;}
 #isa-docs-main-title{margin-top:1em;}
 ul#organized-docs-main,
 ul#organized-docs-main li,
@@ -25,7 +26,7 @@ ul#organized-docs-main li a{text-decoration:none;}
 #isa-docs-item-title{
 	background-color: rgb(247, 245, 231);
 	margin: 0.5em 0 0 0;
-	padding-left:20px;
+	padding-left:36px;
 	padding-top: 7px;
 }
 
@@ -46,6 +47,12 @@ ul#organized-docs-main li a{text-decoration:none;}
 	font-style: italic;
 }
 
+/* single - Twenty Fourteen Theme compatibility */
+body.single-isa_docs .entry-content{max-width:100%;margin-right:0;}
+body.single-isa_docs .site-content .entry-content {padding-top:0;}
+body.single-isa_docs #isa-docs-item-title{margin-top:0;}
+body.single-isa_docs header.entry-header{display:none;}
+
 /**
  * Docs Menu Bar
  * For Twenty Twelve compatibility. It uses default Twenty Thirteen styles, so can remove this with 2013.
@@ -58,7 +65,7 @@ ul#organized-docs-main li a{text-decoration:none;}
 }
 #organized-docs-menu > ul {
     margin: 0px;
-    padding: 0px 40px 0px 0px;
+    padding: 0px 40px 0px 16px;
 }
 #organized-docs-menu li {
     display: inline-block;
