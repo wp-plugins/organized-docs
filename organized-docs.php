@@ -3,7 +3,7 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 1.2.1-RC-3
+ * Version: 1.2.2
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
@@ -58,7 +58,7 @@ class Isa_Organized_Docs{
 			add_action( 'save_post', array( $this, 'save_postdata' ) );
 			add_action('admin_menu', array( $this, 'submenu_page' ) );
 			add_action('wp_head', array( $this, 'dynamic_css' ) );
-
+			add_filter( 'the_posts', array( $this, 'close_comments' ) );
     }
 
 	/** 
@@ -247,27 +247,30 @@ class Isa_Organized_Docs{
 			$postlist = get_posts( $postlist_args );
 				
 			// get ids of posts retrieved from get_posts
+
 			$ids = array();
-			foreach ($postlist as $thepost) {
-			   $ids[] = $thepost->ID;
-			}
-				
+			$titles = array();
+			foreach ($postlist as $thepost) : setup_postdata( $thepost );
+				$ids[] = $thepost->ID;
+				$titles[] = $thepost->post_title;
+			endforeach; 
+			wp_reset_postdata();
+			
 			// get and echo previous and next post in the same taxonomy        
 			$thisindex = array_search($post->ID, $ids);
 			$previd = $ids[$thisindex-1];
 			$nextid = $ids[$thisindex+1];
 
-
+			$anchor_prev = get_option( 'od_title_on_nav_links' ) ? $titles[$thisindex-1] : __( 'Previous', 'organized-docs' );
+			$anchor_next = get_option( 'od_title_on_nav_links' ) ? $titles[$thisindex+1] : __( 'Next', 'organized-docs' );
 			$docscontent .= '<nav class="navigation post-navigation" role="navigation"><h1 class="screen-reader-text">' . __( 'Post navigation', 'organized-docs' ) . '</h1><div class="nav-links">';
 
 			if ( !empty($previd) ) {
-				$docscontent .= '<span class="meta-nav"><a rel="prev" href="' . get_permalink($previd). '">' . __( 'Previous', 'organized-docs' ) . '</a></span>';
+				$docscontent .= '<span class="meta-nav"><a rel="prev" href="' . get_permalink($previd). '">' . $anchor_prev . '</a></span>';
 			}
 			if ( !empty($nextid) ) {
-				$docscontent .= '<span class="meta-nav"><a rel="next" href="' . get_permalink($nextid). '">' . __( 'Next', 'organized-docs' ) . '</a></span>';
-
+				$docscontent .= '<span class="meta-nav"><a rel="next" href="' . get_permalink($nextid). '">' . $anchor_next . '</a></span>';
 			$docscontent .= '</div></nav>';
-
 			}
 			return $docscontent;
 		} else {
@@ -947,6 +950,13 @@ class Isa_Organized_Docs{
 		);
 
 	 	add_settings_section(
+			'od_single_post_setting_section',
+			__( 'Single Post Settings', 'organized-docs' ),
+			array( $this, 'single_setting_section_callback' ),
+			'organized-docs-settings'
+		);
+
+	 	add_settings_section(
 			'od_uninstall_setting_section',
 			__( 'Uninstall Settings', 'organized-docs' ),
 			array( $this, 'uninstall_setting_section_callback' ),
@@ -960,24 +970,48 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_sidebar_ids_to_exclude' );
-
 	 	add_settings_field(
 			'od_hide_printer_icon',
 			__( 'Remove Printer Icon', 'organized-docs' ),
 			array( $this, 'hide_printer_icon_setting_callback' ),
 			'organized-docs-settings',
-			'od_main_setting_section'
+			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_hide_printer_icon' );
-
 	 	add_settings_field(
 			'od_hide_print_link',
 			__( 'Remove Print Link', 'organized-docs' ),
 			array( $this, 'hide_print_link_setting_callback' ),
 			'organized-docs-settings',
-			'od_main_setting_section'
+			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_hide_print_link' );
+	 	add_settings_field(
+			'od_title_on_nav_links',
+			__( 'Title on nav links?', 'organized-docs' ),
+			array( $this, 'title_nav_links_setting_callback' ),
+			'organized-docs-settings',
+			'od_single_post_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_title_on_nav_links' );
+	 	add_settings_field(
+			'od_enable_manage_comments',
+			__( 'Enable Comments Control', 'organized-docs' ),
+			array( $this, 'enable_manage_comments_setting_callback' ),
+			'organized-docs-settings',
+			'od_single_post_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_enable_manage_comments' );
+
+
+	 	add_settings_field(
+			'od_close_comments',
+			__( 'Disable Comments on Single Docs?', 'organized-docs' ),
+			array( $this, 'close_comments_setting_callback' ),
+			'organized-docs-settings',
+			'od_single_post_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_close_comments' );
 	 	add_settings_field(
 			'od_delete_data_on_uninstall',
 			__( 'Remove Data on Uninstall?', 'organized-docs' ),
@@ -995,6 +1029,14 @@ class Isa_Organized_Docs{
 	 */
 	public function main_setting_section_callback() {
 		return true;
+	}
+
+	/**
+	 * Single Docs Posts Settings section callback
+	 * @since 1.2.2
+	 */
+	public function single_setting_section_callback() {
+		echo '<p>' . __('These settings are for the single Docs posts.', 'organized-docs') . '</p>';
 	}
 
 	/**
@@ -1030,6 +1072,37 @@ class Isa_Organized_Docs{
 	public function hide_print_link_setting_callback() {
 		echo '<label for="od_hide_print_link"><input name="od_hide_print_link" id="od_hide_print_link" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_hide_print_link' ), false ) . ' /> ' . __( 'Check this box to remove the Print link altogether from single Docs.', 'organized-docs' ) . '</label>';
 	}
+
+	/**
+	 * Callback function for setting to show title on nav links
+	 * @since 1.2.2
+	 */
+	public function title_nav_links_setting_callback() {
+		echo '<label for="od_title_on_nav_links"><input name="od_title_on_nav_links" id="od_title_on_nav_links" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_title_on_nav_links' ), false ) . ' /> ' . __( 'Check this box to show the post titles instead of "Previous" and "Next" on the nav links on the bottom of single Docs.', 'organized-docs' ) . '</label>';
+	}
+
+	/**
+	 * Callback function for setting to enable comments control
+	 * @since 1.2.2
+	 */
+	public function enable_manage_comments_setting_callback() {
+		echo '<label for="od_enable_manage_comments"><input name="od_enable_manage_comments" id="od_enable_manage_comments" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_enable_manage_comments' ), false ) . ' /> ' . __( 'Check this box to turn on the ability to use the next option. This is here because managing comments is heavy. You should turn this off after you see that your next option has taken effect.', 'organized-docs' ) . '</label>';
+
+	}
+
+	/**
+	 * Callback function for setting to disable comments
+	 * @since 1.2.2
+	 */
+	public function close_comments_setting_callback() {
+
+		$html = '<input type="radio" id="od_close_comments_false" name="od_close_comments" value="1"' . checked( 1, get_option( 'od_close_comments' ), false ) . '/>';
+		$html .= '<label for="od_close_comments_false">No</label><br /><br/ >';
+		$html .= '<input type="radio" id="od_close_comments_true" name="od_close_comments" value="2"' . checked( 2, get_option( 'od_close_comments' ), false ) . '/>';
+		$html .= '<label for="od_close_comments_true">Yes</label>';
+		echo $html;
+	}
+
 	/**
 	 * Callback function for setting to remove data on uninstall
 	 * @since 1.1.9
@@ -1043,18 +1116,38 @@ class Isa_Organized_Docs{
 	 * @since 1.2.1
 	 */
 	public function dynamic_css() {
-
 		$theme = wp_get_theme();
-
 		echo '<style>';
 		if( ( 'Twenty Fourteen' == $theme->name ) || ( 'Twenty Fourteen' == $theme->parent_theme ) ) {
 			echo 'body.single-isa_docs .entry-content {max-width: 100%;margin-right: 0px;}';
 		}
-
 		if( ( 'Twenty Twelve' == $theme->name ) || ( 'Twenty Twelve' == $theme->parent_theme ) ) {
 			echo '.nav-single {display:none;}';
 		}
 		echo '</style>';
+	}
+
+	/**
+	 * Close comments on Docs
+	 * @since 1.2.2
+	 */
+	function close_comments( $posts ) {
+		if ( !is_single() || ! get_option( 'od_enable_manage_comments' ) ) {
+			return $posts;
+		}
+		if ( 'isa_docs' == get_post_type($posts[0]->ID) ) {
+
+			if ( get_option( 'od_close_comments' ) == 2 ) {
+				$status = 'closed';
+			} else {
+				$status = 'open';
+			}
+
+			$posts[0]->comment_status = $status;
+			$posts[0]->ping_status    = $status;
+			wp_update_post( $posts[0] );
+		}
+		return $posts;
 	}
 
 	/**
