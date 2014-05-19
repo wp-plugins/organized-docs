@@ -3,7 +3,7 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
@@ -142,7 +142,6 @@ class Isa_Organized_Docs{
 	        );
     	register_post_type( 'isa_docs' , $args );
 	} // end create_docs_cpt
-
 	/** 
 	 * Add stylesheet
 	 */
@@ -174,8 +173,10 @@ class Isa_Organized_Docs{
 	 * Allow the creation of the docs menu item
 	 */
 	public function create_docs_menu_item() {
-		add_filter('wp_nav_menu_items', array( $this, 'docs_menu_link' ), 10, 2);
-		add_filter( 'wp_page_menu', array( $this, 'docs_page_menu_link' ), 95 );
+		if (! get_option('od_disable_menu_link')) {
+			add_filter('wp_nav_menu_items', array( $this, 'docs_menu_link' ), 10, 2);
+			add_filter( 'wp_page_menu', array( $this, 'docs_page_menu_link' ), 95 );
+		}
 	}
 	/**
 	 * Get the custom template if is set
@@ -365,17 +366,17 @@ class Isa_Organized_Docs{
 	 */
 	public function setup_docs_taxonomy() {
 		$category_labels = array(
-			'name' => __( 'Categories', 'organized-docs' ),
-			'singular_name' =>__( 'Category', 'organized-docs' ),
-			'search_items' => __( 'Search Categories', 'organized-docs' ),
-			'all_items' => __( 'All Categories', 'organized-docs' ),
-			'parent_item' => __( 'Parent Category', 'organized-docs' ),
-			'parent_item_colon' => __( 'Parent Category:', 'organized-docs' ),
-			'edit_item' => __( 'Edit Category', 'organized-docs' ),
-			'update_item' => __( 'Update Category', 'organized-docs' ),
-			'add_new_item' => __( 'Add New Category', 'organized-docs' ),
-			'new_item_name' => __( 'New Category Name', 'organized-docs' ),
-			'menu_name' => __( 'Categories', 'organized-docs' ),
+			'name' => __( 'Docs Categories', 'organized-docs' ),
+			'singular_name' =>__( 'Docs Category', 'organized-docs' ),
+			'search_items' => __( 'Search Docs Categories', 'organized-docs' ),
+			'all_items' => __( 'All Docs Categories', 'organized-docs' ),
+			'parent_item' => __( 'Docs Parent Category', 'organized-docs' ),
+			'parent_item_colon' => __( 'Docs Parent Category:', 'organized-docs' ),
+			'edit_item' => __( 'Edit Docs Category', 'organized-docs' ),
+			'update_item' => __( 'Update Docs Category', 'organized-docs' ),
+			'add_new_item' => __( 'Add New Docs Category', 'organized-docs' ),
+			'new_item_name' => __( 'New Docs Category Name', 'organized-docs' ),
+			'menu_name' => __( 'Docs Categories', 'organized-docs' ),
 		);
 		$custom_slug = get_option('od_rewrite_docs_slug');
 /* translators: URL slug */
@@ -695,8 +696,6 @@ class Isa_Organized_Docs{
 		}
 		return $query;
 	}
-
-
 	/**
 	 * Add submenu page
 	 * @since 1.1.9
@@ -705,7 +704,6 @@ class Isa_Organized_Docs{
 	public function submenu_page() {
 		add_submenu_page( 'edit.php?post_type=isa_docs', __( 'Organized Docs Settings', 'organized-docs' ), __('Settings', 'organized-docs'), 'manage_options', 'organized-docs-settings', array( $this, 'settings_page_callback' ) ); 
 	}
-
 	/**
 	 * HTML output for the submenu page
 	 * @since 1.1.9
@@ -778,6 +776,14 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_disable_microdata' );
+		add_settings_field(
+			'od_disable_menu_link',
+			__( 'Disable Docs Menu Link', 'organized-docs' ),
+			array( $this, 'disable_menu_link_setting_callback' ),
+			'organized-docs-settings',
+			'od_main_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_disable_menu_link' );
 	 	add_settings_field(
 			'od_hide_printer_icon',
 			__( 'Remove Printer Icon', 'organized-docs' ),
@@ -902,6 +908,13 @@ class Isa_Organized_Docs{
 		echo '<label for="od_disable_microdata"><input name="od_disable_microdata" id="od_disable_microdata" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_disable_microdata' ), false ) . ' /> ' . __( 'Check this box to disable the schema.org microdata. Default adds TechArticle to single Docs, and CollectionPage to Docs archives.', 'organized-docs' ) . '</label>';
 	}
 	/**
+	 * Callback function for setting to disable menu link
+	 * @since 2.0.2
+	 */
+	public function disable_menu_link_setting_callback() {
+		echo '<label for="od_disable_menu_link"><input name="od_disable_menu_link" id="od_disable_menu_link" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_disable_menu_link' ), false ) . ' /> ' . __( 'Check this box to disable the Docs menu link that gets automatically added to your menu. You can still add your own link in Appearances -> Menus.', 'organized-docs' ) . '</label>';
+	}
+	/**
 	 * Callback function for setting to hide printer icon
 	 * @since 1.2.0
 	 */
@@ -1004,9 +1017,9 @@ class Isa_Organized_Docs{
 			echo '.single-isa_docs #content {margin: 0  !important;padding:0;width: 68% !important;}';
 		}
 		if( ( 'Twenty Fourteen' == $theme->name ) || ( 'Twenty Fourteen' == $theme->parent_theme ) ) {
-			echo 'body.single-isa_docs .type-isa_docs{margin: 0 0 0 15%;}.tax-isa_docs_category .content-area,.post-type-archive-isa_docs .content-area{padding-top: 0px;}';
+			echo 'body.single-isa_docs .type-isa_docs{margin: 0 0 0 15%;}.tax-isa_docs_category .content-area,.post-type-archive-isa_docs .content-area{padding-top: 0px;}@media screen and (max-device-width:768px){body.single-isa_docs .type-isa_docs {margin: 0;}}';
 		}
-		echo '</style>';
+		echo "</style>";
 	}
 	/**
 	 * Close comments on Docs
