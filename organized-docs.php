@@ -3,7 +3,7 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 2.0.3
+ * Version: 2.0.4
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
@@ -86,17 +86,16 @@ class Isa_Organized_Docs{
 	* @return void
 	*/
 	public function support_link($actions, $file) {
-	$od_path    = plugin_basename(__FILE__);
-	if(false !== strpos($file, $od_path))
-	 $actions['settings'] = '<a href="http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin" target="_blank">'. __( 'Setup Instructions', 'organized-docs' ) . '</a>';
+		$od_path = plugin_basename(__FILE__);
+		if(false !== strpos($file, $od_path))
+		 $actions['settings'] = '<a href="http://isabelcastillo.com/docs/how-to-set-up-categories" target="_blank">'. __( 'Setup Instructions', 'organized-docs' ) . '</a>';
 
-	return $actions; 
+		return $actions; 
 	}
 	/** 
 	* Load plugin's textdomain
 	* @return void
 	*/
-
 	public function load_textdomain() {
 		load_plugin_textdomain( 'organized-docs', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 	}
@@ -215,6 +214,7 @@ class Isa_Organized_Docs{
 	 */
 	public function organized_docs_section_heading() {
 		global $post, $data;
+		$heading = '';
 		if ( is_tax( 'isa_docs_category' ) ) {
 	
 			// get top level parent term on custom taxonomy archive
@@ -242,21 +242,21 @@ class Isa_Organized_Docs{
 			// get top level parent term on single
 
 			$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
-			$first_cat = $doc_categories[0]; // first category
-			$curr_term_id = $first_cat->term_id;
-			$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
-		
-			$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
-		
-			$top_term_link = get_term_link( $top_term );
-			$top_term_name = $top_term->name;
-		
-			$heading = '<h2 id="isa-docs-item-title">';
-			$heading .= '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
-			$heading .= '</h2>';			
-		
+			if ( $doc_categories ) {
+				$first_cat = $doc_categories[0]; // first category
+				$curr_term_id = $first_cat->term_id;
+				$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+			
+				$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
+			
+				$top_term_link = get_term_link( $top_term );
+				$top_term_name = $top_term->name;
+			
+				$heading = '<h2 id="isa-docs-item-title">';
+				$heading .= '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
+				$heading .= '</h2>';
+			}
 		}
-	
 		return $heading;
 
 	} // end organized_docs_section_title()
@@ -270,28 +270,30 @@ class Isa_Organized_Docs{
 		if ( is_post_type_archive( 'isa_docs' ) ) 
 			return;
 
-		$docs_menu = '<div id="organized-docs-menu" class="navbar nav-menu"><ul>';
-
 		if ( is_tax( 'isa_docs_category' ) ) {
 		
 			// need regular current term id, only used to compare w/ top level term id later
 			$taxonomy = get_query_var( 'taxonomy' );
 			$queried_object = get_queried_object();
-			$curr_term_id =  (int) $queried_object->term_id;
+			$curr_term_id = (int) $queried_object->term_id;
 			$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
 		
-		} else { // if is single, get top level term id on single
-				global $post;
-				$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
+		} else { // is single, get top level term id on single
+			global $post;
+			$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
+			if ($doc_categories) {
 				$first_cat = $doc_categories[0]; // first category
-				$curr_term_id = $first_cat->term_id;
+				$curr_term_id = (int)$first_cat->term_id;
 				// need regular current cat id, only used to compare w/ top level cat id
 				$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+			} else {
+				// cat is not assigned
+				return;
+			}
 		}
 				
-		/** make sure current term id is integer. will be compared to child cats in menu below */
-		$curr_term_id_as_int = (int)$curr_term_id;
-		
+		$docs_menu = '<div id="organized-docs-menu" class="navbar nav-menu"><ul>';
+						
 		/** proceed with getting children of top level term, not simply children of current term, unless, of course, the current term is a top level parent **/
 		
 		// get term children and sort them by custom sort oder
@@ -306,7 +308,7 @@ class Isa_Organized_Docs{
 					$docs_menu .= '<li class="menu-item';
 			
 					// if current term id matches an id of a child term in menu, then give it active class
-					if ( $termobject->term_id == $curr_term_id_as_int ) {
+					if ( $termobject->term_id == $curr_term_id ) {
 						$docs_menu .= ' active-docs-item current_page_item';
 					}
 					$docs_menu .= '"><a href="' . get_term_link( $termobject ) . '" title="' . esc_attr( $termobject->name ) . '">' . $termobject->name . '</a></li>';
@@ -736,12 +738,24 @@ class Isa_Organized_Docs{
 			array( $this, 'main_setting_section_callback' ),
 			'organized-docs-settings'
 		);
+		add_settings_section(
+			'od_toplevel_setting_section',
+			__( 'Top Level Category Pages', 'organized-docs' ),
+			array( $this, 'toplevel_setting_section_callback' ),
+			'organized-docs-settings'
+		);
 	 	add_settings_section(
 			'od_single_post_setting_section',
 			__( 'Single Post Settings', 'organized-docs' ),
 			array( $this, 'single_setting_section_callback' ),
 			'organized-docs-settings'
 		);
+		add_settings_section(
+			'od_widget_setting_section',
+			__( 'Table of Contents Widget', 'organized-docs' ),
+			array( $this, 'widget_setting_section_callback' ),
+			'organized-docs-settings'
+		);		
 	 	add_settings_section(
 			'od_uninstall_setting_section',
 			__( 'Uninstall Settings', 'organized-docs' ),
@@ -764,14 +778,6 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_change_main_docs_title' );
-		add_settings_field(
-			'od_disable_list_each_single',
-			__( 'Do Not List Each Single Title', 'organized-docs' ),
-			array( $this, 'disable_list_each_single_setting_callback' ),
-			'organized-docs-settings',
-			'od_main_setting_section'
-		);
-	 	register_setting( 'organized-docs-settings', 'od_disable_list_each_single' );
 		add_settings_field(
 			'od_disable_microdata',
 			__( 'Disable Microdata', 'organized-docs' ),
@@ -836,7 +842,14 @@ class Isa_Organized_Docs{
 			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_close_comments' );
-
+	 	add_settings_field(
+			'od_list_toggle',
+			__( 'List Each Single Title?', 'organized-docs' ),
+			array( $this, 'list_toggle_setting_callback' ),
+			'organized-docs-settings',
+			'od_toplevel_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_list_toggle' );
 	 	add_settings_field(
 			'od_single_sort_by',
 			__( 'Sort Single Docs By ...', 'organized-docs' ),
@@ -861,6 +874,14 @@ class Isa_Organized_Docs{
 			'od_uninstall_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_delete_data_on_uninstall' );
+	 	add_settings_field(
+			'od_widget_list_toggle',
+			__( 'List Each Single Title?', 'organized-docs' ),
+			array( $this, 'widget_list_toggle_setting_callback' ),
+			'organized-docs-settings',
+			'od_widget_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_widget_list_toggle' );
 	}
 	/**
 	 * Main Settings section callback
@@ -869,6 +890,15 @@ class Isa_Organized_Docs{
 	public function main_setting_section_callback() {
 		return true;
 	}
+	
+	/**
+	 * Top Level Category Pages Settings section callback
+	 * @since 2.0.4
+	 */
+	public function toplevel_setting_section_callback() {
+		echo '<p>' . __('These settings are for the top-level item pages. These are pages which list all Docs for that top-level item.', 'organized-docs') . '</p>';
+	}
+	
 	/**
 	 * Single Docs Posts Settings section callback
 	 * @since 1.2.2
@@ -876,6 +906,14 @@ class Isa_Organized_Docs{
 	public function single_setting_section_callback() {
 		echo '<p>' . __('These settings are for the single Docs posts.', 'organized-docs') . '</p>';
 	}
+	/**
+	 * Widget Settings section callback
+	 * @since 2.0.4
+	 */
+	public function widget_setting_section_callback() {
+		return true;
+	}
+	
 	/**
 	 * Uninstall Settings section callback
 	 * @since 1.1.9
@@ -897,13 +935,7 @@ class Isa_Organized_Docs{
 	public function change_main_docs_title_setting_callback() {
 		echo '<input name="od_change_main_docs_title" id="od_change_main_docs_title" value="' . get_option('od_change_main_docs_title'). '" type="text" class="regular-text" /><p class="description">' . __( 'Change the page title that is displayed on the main Docs page. Leave blank for default "Docs".', 'organized-docs' );
 	}
-	/**
-	 * Callback function for setting to not list each single post
-	 * @since 2.0
-	 */
-	public function disable_list_each_single_setting_callback() {
-		echo '<label for="od_disable_list_each_single"><input name="od_disable_list_each_single" id="od_disable_list_each_single" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_disable_list_each_single' ), false ) . ' /> ' . __( 'Check this box if you do NOT want to list each individual title on the top-level item page, nor in the Table of Contents sidebar. This will leave only the subheadings listed.', 'organized-docs' ) . '</label>';
-	}
+	
 	/**
 	 * Callback function for setting to disable microdata
 	 * @since 2.0
@@ -963,28 +995,72 @@ class Isa_Organized_Docs{
 	public function close_comments_setting_callback() {
 
 		$html = '<input type="radio" id="od_close_comments_false" name="od_close_comments" value="1"' . checked( 1, get_option( 'od_close_comments' ), false ) . '/>';
-		$html .= '<label for="od_close_comments_false">No</label><br /><br/ >';
+		$html .= '<label for="od_close_comments_false">' . __( 'No', 'organized-docs' ) . '</label><br /><br/ >';
 		$html .= '<input type="radio" id="od_close_comments_true" name="od_close_comments" value="2"' . checked( 2, get_option( 'od_close_comments' ), false ) . '/>';
-		$html .= '<label for="od_close_comments_true">Yes</label>';
+		$html .= '<label for="od_close_comments_true">' . __( 'Yes', 'organized-docs' ) . '</label>';
 		echo $html;
 	}
 
+	/**
+	 * Callback function for setting to list, toggle, or hide individual articles on a top level category page.
+	 * @since 2.0.4
+	 */
+	public function list_toggle_setting_callback() {
+		$selected_option = get_option('od_list_toggle');
+		
+		$items = array(
+			"list"		=> __( 'list', 'organized-docs' ),
+			"hide"		=> __( 'hide', 'organized-docs' ),
+			"toggle"	=> __( 'toggle', 'organized-docs' )
+			);
+		
+		echo "<select id='od_list_toggle' name='od_list_toggle'>";
+
+		foreach($items as $key => $val) {
+			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
+			echo "<option value='$key' $selected>$val</option>";
+		}
+		echo '</select><p class="description">' . __('On the top-level category pages, choose whether to list each article under its sub-heading, or hide the list of articles and only show sub-headings, or toggle the list when clicking a sub-heading.', 'organized-docs') . '</p>';// @todo make new .pot file.
+
+	}
+	
+	/**
+	 * Callback function for setting to list, toggle, or hide individual articles in widget.
+	 * @since 2.0.4
+	 */
+	public function widget_list_toggle_setting_callback() {
+		$selected_option = get_option('od_widget_list_toggle');
+		$items = array(
+			"list"		=> __( 'list', 'organized-docs' ),
+			"hide"		=> __( 'hide', 'organized-docs' ),
+			"toggle"	=> __( 'toggle', 'organized-docs' ));		
+		
+		echo "<select id='od_widget_list_toggle' name='od_widget_list_toggle'>";
+		foreach($items as $key => $val) {
+			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
+			echo "<option value='$key' $selected>$val</option>";
+		}
+		echo '</select><p class="description">' . __('In the Table of Contents widget, choose whether to list each article under its sub-heading, or hide the list of articles and only show sub-headings, or toggle the list when clicking a sub-heading.', 'organized-docs') . '</p>';
+	}
+	
 	/**
 	 * Callback function for setting to sort single docs
 	 * @since 2.0
 	 */
 	public function single_sort_by_setting_callback() {
 		$selected_option = get_option('od_single_sort_by');
-		$items = array("custom sort order number", "title - alphabetical", "date");
+		$items = array(
+				"custom sort order number"	=> __( 'custom sort order number', 'organized-docs' ),
+				"title - alphabetical"		=> __( 'title - alphabetical', 'organized-docs' ),
+				"date"						=> __( 'date', 'organized-docs' ) );
+
 		echo "<select id = 'od_single_sort_by' name = 'od_single_sort_by'>";
 
-		foreach($items as $item) {
-			$selected = ( $selected_option == $item ) ? ' selected = "selected"' : '';
-			echo "<option value='$item' $selected>$item</option>";
+		foreach($items as $key => $val) {
+			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
+			echo "<option value='$key' $selected>$val</option>";
 		}
-
-		echo "</select>";
-		echo '<p class="description">Choose how to sort single docs.</p>';
+		echo '</select><p class="description">' . __( 'Choose how to sort single docs.', 'organized-docs' ) . '</p>';
 	}
 	
 	/**
@@ -1001,7 +1077,7 @@ class Isa_Organized_Docs{
 			echo "<option value='$item' $selected>$item</option>";
 		}
 		echo "</select>";
-		echo '<p class="description">Choose ascending or descending sort order.</p>';
+		echo '<p class="description">' . __( 'Choose ascending or descending sort order.', 'organized-docs' ) . '</p>';
 	}
 	/**
 	 * Callback function for setting to remove data on uninstall
@@ -1056,6 +1132,11 @@ class Isa_Organized_Docs{
 	public function organized_docs_post_nav() {
 		global $post;
 		$term_list = wp_get_post_terms($post->ID, 'isa_docs_category', array("fields" => "slugs"));
+		
+		if ( ! $term_list ) {
+			return;
+		}
+		
 		// get_posts in same custom taxonomy
 
 		// sort terms by chosen orderby
@@ -1105,6 +1186,18 @@ class Isa_Organized_Docs{
 		$out .= '</div></nav>';
 		echo $out;
 	}
+
+	/**
+	* Small inline js for optional toggle. Will only be included if toggle option is enabled.
+	* @return string
+	* @since 2.0.4
+	*/
+	public function inline_js() {
+		$js = '<script>jQuery(document).ready(function(){jQuery( ".docs-sub-heading" ).click(function() {jQuery(this).next().slideToggle();}).next().hide();});</script>';
+		
+		return $js;
+	}
+	
 	/**
 	 * For backwards compatibility, give all single Docs posts a default sort-order number of 99999
 	 * @since 1.1.8
@@ -1113,7 +1206,7 @@ class Isa_Organized_Docs{
 	public function update_docs_sort_order_post_meta() {
 		global $post;
 		// Run this update only once
-		if (	get_option( 'odocs_update_sortorder_postmeta' ) != 'completed' ) {
+		if ( get_option( 'odocs_update_sortorder_postmeta' ) != 'completed' ) {
 			$args = array(	'post_type' => 'isa_docs', 
 				'posts_per_page' => -1,
 			);
@@ -1135,9 +1228,23 @@ class Isa_Organized_Docs{
 			delete_option( 'odocs_update_custom_tax_terms_meta' );
 			delete_option( 'odocs_bugfix_update_term_meta' );
 			delete_option( 'odocs_update_sortorder_meta' );
-			delete_option(	'odocs_update_sortorder_post_meta' );
-
+			delete_option( 'odocs_update_sortorder_post_meta' );
+			
 			update_option( 'odocs_update_sortorder_postmeta', 'completed' );
+		}
+		
+		/* Backwards compatibility for those who already enabled option to hide each article.
+		 *  Migrate the option to the new hide/list/toggle option.
+		 */
+	 
+		// Run this update only once
+		if ( get_option( 'odocs_update_disable_list_each' ) != 'completed' ) {
+			if ( get_option('od_disable_list_each_single') ) {
+				update_option( 'od_list_toggle', 'hide' );
+				update_option( 'od_widget_list_toggle', 'hide' );
+			}
+			delete_option( 'od_disable_list_each_single' );
+			update_option( 'odocs_update_disable_list_each', 'completed' );
 		}
 	}
 }
