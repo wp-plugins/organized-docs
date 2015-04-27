@@ -1,9 +1,9 @@
-﻿=== Organized Docs ===
+=== Organized Docs ===
 Contributors: isabel104
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=me%40isabelcastillo%2ecom
 Tags: documentation, docs, organize documentation, organized documentation, instruction guides, wiki
 Requires at least: 3.9
-Tested up to: 4.0
+Tested up to: 4.2
 Stable Tag: 2.0.4
 License: GNU Version 2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -18,9 +18,7 @@ Each product's docs is further organized into subsections. The subsections list 
 
 The single docs posts will have a Docs Table of Contents widget added to the sidebar. This will show a Table of Contents for docs pertaining only to the product which this current single doc belongs to. 
 
-Demo [Organized Docs on Twenty Fourteen](http://smartestthemes.com/organized-docs-wordpress-plugin/docs/) theme
-
-Demo [Organized Docs on Twenty Twelve](http://smartestthemes.com/organized-docs-on-twentytwelve/docs/) theme
+Demo [Organized Docs on a default WordPress theme](http://smartestthemes.com/organized-docs-wordpress-plugin/docs/)
 
 [Setup Instructions](http://isabelcastillo.com/docs/how-to-set-up-categories)
 
@@ -48,6 +46,8 @@ This is no longer an issue since version 2.0.
 == Changelog ==
 
 = 2.0.4 =
+* New - option to toggle the list of individual Docs articles on the top-level category pages.
+* New - option to toggle the list of individual Docs articles in the Table of Contents widget.
 * Fix - remove several PHP warnings that occurred when viewing a single Doc while a category was not assigned to the Doc.
 * Tweak - updated the URL for Setup Instructions.
 * Maintenance - updated the Table of Contents widget to work with the WordPress 4.0 customizer.
@@ -196,3 +196,4 @@ New: set custom sort order for Top-level Doc Items, Sub-headings, and individual
 
 = 1.1.4 =
 Bug fix: Table of Contents Widget was showing up 3 times on Twenty Fourteen theme.
+
