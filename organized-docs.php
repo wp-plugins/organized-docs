@@ -3,14 +3,14 @@
  * Plugin Name: Organized Docs
  * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
  * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 2.0.4
+ * Version: 2.1
  * Author: Isabel Castillo
  * Author URI: http://isabelcastillo.com
  * License: GPL2
  * Text Domain: organized-docs
  * Domain Path: languages
  * 
- * Copyright 2013 - 2014 Isabel Castillo
+ * Copyright 2013 - 2015 Isabel Castillo
  * 
  * This file is part of Organized Docs.
  * 
@@ -27,7 +27,8 @@
  * You should have received a copy of the GNU General Public License
  * along with Organized Docs. If not, see <http://www.gnu.org/licenses/>.
  */
-if(!class_exists('Isa_Organized_Docs')) {
+
+if ( ! class_exists( 'Isa_Organized_Docs' ) ) {
 class Isa_Organized_Docs{
 
 	private static $instance = null;
@@ -102,7 +103,7 @@ class Isa_Organized_Docs{
 	/** 
 	 * Add isa_docs CPT.
 	 */
-	public function create_docs_cpt() {
+	public static function create_docs_cpt() {
 		$slug_rewrite = get_option('od_rewrite_docs_slug');
 		// slugify
 /* translators: URL slug */
@@ -209,58 +210,59 @@ class Isa_Organized_Docs{
 		}
 	}
 
-	/**
-	 * Returns the top category item as a heading for docs category taxonomy archives and for docs single pages. Fetched one way from single docs, and a different way from taxonomy archives.
-	 */
-	public function organized_docs_section_heading() {
-		global $post, $data;
-		$heading = '';
-		if ( is_tax( 'isa_docs_category' ) ) {
-	
-			// get top level parent term on custom taxonomy archive
-			$heading = '<h1 id="isa-docs-item-title" class="entry-title"';
-			if ( ! get_option('od_disable_microdata') ) {
-				$heading .= ' itemprop="name"';
-			}
-			$heading .= '>';
-			
-			$taxonomy = get_query_var( 'taxonomy' );
-			$queried_object = get_queried_object();
-			$curr_term_id =  (int) $queried_object->term_id;
 
+	/**
+	 * Returns the top category item as a heading for docs single posts.
+	 */
+	public function organized_docs_single_section_heading() {
+		global $post;
+		$heading = '';
+		// get top level parent term on single
+
+		$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
+		if ( $doc_categories ) {
+			$first_cat = $doc_categories[0]; // first category
+			$curr_term_id = $first_cat->term_id;
 			$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+			
 			$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
 		
 			$top_term_link = get_term_link( $top_term );
 			$top_term_name = $top_term->name;
 		
-			$heading .= '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
-			$heading .= '</h1>';
-
-		} elseif ( is_single() ) {
-
-			// get top level parent term on single
-
-			$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
-			if ( $doc_categories ) {
-				$first_cat = $doc_categories[0]; // first category
-				$curr_term_id = $first_cat->term_id;
-				$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
-			
-				$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
-			
-				$top_term_link = get_term_link( $top_term );
-				$top_term_name = $top_term->name;
-			
-				$heading = '<h2 id="isa-docs-item-title">';
-				$heading .= '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '">' . $top_term_name . '</a>';
-				$heading .= '</h2>';
-			}
+			$heading .= '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '"><h2 id="isa-docs-item-title">' . $top_term_name . '</h2></a>';
 		}
+	
 		return $heading;
 
-	} // end organized_docs_section_title()
+	}
 
+	/**
+	 * Returns the top category item as a heading for docs category taxonomy archives.
+	 */
+	public function organized_docs_archive_section_heading() {
+		// get top level parent term on custom taxonomy archive
+		$taxonomy = get_query_var( 'taxonomy' );
+		$queried_object = get_queried_object();
+		$curr_term_id =  (int) $queried_object->term_id;
+		$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+		$top_term = get_term( $top_level_parent_term_id, 'isa_docs_category' );
+	
+		$top_term_link = get_term_link( $top_term );
+		$top_term_name = empty( $top_term->name ) ? '' : $top_term->name;
+	
+		$heading = '<a href="' . $top_term_link  . '" title="' . esc_attr( $top_term_name ) . '">';
+
+		$heading .= '<h1 id="isa-docs-item-title" class="entry-title"';
+		if ( ! get_option('od_disable_microdata') ) {
+			$heading .= ' itemprop="name"';
+		}
+		$heading .= '>';
+		$heading .= $top_term_name . '</h1></a>';
+	
+		return $heading;
+
+	}
 
 	/**
 	 * Returns dynamic menu for Docs. Lists only subterms of top level parent of current term, on Docs taxonomy archive and on Docs single, but nothing on the main Docs parent archive.  
@@ -299,7 +301,7 @@ class Isa_Organized_Docs{
 		// get term children and sort them by custom sort oder
 		$termchildren =  get_term_children( $top_level_parent_term_id, 'isa_docs_category' );
 		if($termchildren) {
-			$sorted_termchildren = $this->sort_terms( $termchildren, 'subheading_sort_order' );
+			$sorted_termchildren = $this->sort_terms_custom( $termchildren, 'subheading_sort_order' );
 			if($sorted_termchildren) {
 			
 				foreach ( $sorted_termchildren as $sorted_termchild_id => $sorted_termchild_order ) { 
@@ -370,7 +372,7 @@ class Isa_Organized_Docs{
 	 * Registers the custom taxonomies for the docs custom post type
 	 * @return void
 	 */
-	public function setup_docs_taxonomy() {
+	 public static function setup_docs_taxonomy() {
 		$category_labels = array(
 			'name' => __( 'Docs Categories', 'organized-docs' ),
 			'singular_name' =>__( 'Docs Category', 'organized-docs' ),
@@ -532,10 +534,14 @@ class Isa_Organized_Docs{
 	 * 
 	 * @param array $term_ids to sort
 	 * @param int|string $term_meta_key key that holds our custom term_meta value
-	 * @return array
+	 * @return array of sorted terms with term ids as key and sort order number as value
 	 * @since 1.1.5
 	 */
-	public function sort_terms( $term_ids, $term_meta_key ) {
+	public function sort_terms_custom( $term_ids, $term_meta_key ) {
+
+		if ( empty( $term_ids ) ) {
+			return;
+		}
 
 		$ordered_terms = array();
 		$new_order_numbers = array();
@@ -601,6 +607,52 @@ class Isa_Organized_Docs{
 	}
 
 	/**
+	 * Get the sorted main, top-level terms.
+	 * @since 2.1
+	 * @return array of sorted term ids with their names
+	 */
+	public function get_sorted_main_item_terms() {
+
+		$args = array(
+				'fields' => 'id=>name',				
+				'parent' => 0,// only top level terms
+		);
+
+		$terms = get_terms( 'isa_docs_category', $args );
+
+		if ( empty( $terms ) ) {
+			return;
+		}
+
+		$sort_by = get_option('od_main_top_sort_by');
+
+		if ( 'title' != $sort_by ) {
+
+			// need simple array of term ids to sort by custom meta
+			$term_ids = array();
+			foreach ( $terms as $k => $v ) {
+				$term_ids[] = $k;
+			}
+
+			$sorted_term_ids = $this->sort_terms_custom( $term_ids, 'main_doc_item_sort_order' );
+
+			// rebuild the terms array in new order
+			$terms = array();
+			foreach ( $sorted_term_ids as $term_id => $order ) {
+				$term_object = get_term( $term_id, 'isa_docs_category' );
+
+				if ( ! is_wp_error( $term_object  ) ) {
+					$terms[$term_id] = $term_object->name;
+				}
+			}
+
+		}
+
+		return $terms;
+	}
+
+
+	/**
 	 * Adds a sort-order meta box to the Docs edit screen.
 	 * @since 1.1.5
 	 */
@@ -621,10 +673,8 @@ class Isa_Organized_Docs{
 	 * @since 1.1.5
 	 */
 	public function odocs_sort_oder_box( $post ) {
-	
 		wp_nonce_field( 'odocs_sort_oder_box', 'odocs_sort_oder_box_nonce' );
-	
-		/*
+			/*
 		 * Use get_post_meta() to retrieve an existing value
 		 * from the database and use the value for the form.
 		 */
@@ -779,6 +829,14 @@ class Isa_Organized_Docs{
 		);
 	 	register_setting( 'organized-docs-settings', 'od_change_main_docs_title' );
 		add_settings_field(
+			'od_main_top_sort_by',
+			__( 'Main Items Sort Order', 'organized-docs' ),
+			array( $this, 'main_top_sort_by_setting_callback' ),
+			'organized-docs-settings',
+			'od_main_setting_section'
+		);
+	 	register_setting( 'organized-docs-settings', 'od_main_top_sort_by' );
+		add_settings_field(
 			'od_disable_microdata',
 			__( 'Disable Microdata', 'organized-docs' ),
 			array( $this, 'disable_microdata_setting_callback' ),
@@ -810,14 +868,6 @@ class Isa_Organized_Docs{
 			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_hide_print_link' );
-		add_settings_field(
-			'od_dont_load_fa',
-			__( 'Don\'t Load Font Awesome Again', 'organized-docs' ),
-			array( $this, 'dont_load_fa_setting_callback' ),
-			'organized-docs-settings',
-			'od_single_post_setting_section'
-		);
-	 	register_setting( 'organized-docs-settings', 'od_dont_load_fa' );
 	 	add_settings_field(
 			'od_title_on_nav_links',
 			__( 'Title on nav links?', 'organized-docs' ),
@@ -965,13 +1015,6 @@ class Isa_Organized_Docs{
 		echo '<label for="od_hide_print_link"><input name="od_hide_print_link" id="od_hide_print_link" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_hide_print_link' ), false ) . ' /> ' . __( 'Check this box to remove the Print link altogether from single Docs.', 'organized-docs' ) . '</label>';
 	}
 	/**
-	 * Callback function for setting to not load Font Awesome
-	 * @since 2.0
-	 */
-	public function dont_load_fa_setting_callback() {
-		echo '<label for="od_dont_load_fa"><input name="od_dont_load_fa" id="od_dont_load_fa" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_dont_load_fa' ), false ) . ' /> ' . __( 'Check this box if you already load the Font Awesome stylesheet in your theme (or other plugin). We don\'t want to load duplicates!', 'organized-docs' ) . '</label>';
-	}
-	/**
 	 * Callback function for setting to show title on nav links
 	 * @since 1.2.2
 	 */
@@ -1020,7 +1063,7 @@ class Isa_Organized_Docs{
 			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
 			echo "<option value='$key' $selected>$val</option>";
 		}
-		echo '</select><p class="description">' . __('On the top-level category pages, choose whether to list each article under its sub-heading, or hide the list of articles and only show sub-headings, or toggle the list when clicking a sub-heading.', 'organized-docs') . '</p>';// @todo make new .pot file.
+		echo '</select><p class="description">' . __('On the top-level category pages, choose whether to list each article under its sub-heading, or hide the list of articles and only show sub-headings, or toggle the list when clicking a sub-heading.', 'organized-docs') . '</p>';
 
 	}
 	
@@ -1051,16 +1094,34 @@ class Isa_Organized_Docs{
 		$selected_option = get_option('od_single_sort_by');
 		$items = array(
 				"custom sort order number"	=> __( 'custom sort order number', 'organized-docs' ),
-				"title - alphabetical"		=> __( 'title - alphabetical', 'organized-docs' ),
+				"title - alphabetical"		=> __( 'title - alpha/numeric', 'organized-docs' ),
 				"date"						=> __( 'date', 'organized-docs' ) );
 
-		echo "<select id = 'od_single_sort_by' name = 'od_single_sort_by'>";
+		echo "<select id='od_single_sort_by' name='od_single_sort_by'>";
 
 		foreach($items as $key => $val) {
 			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
 			echo "<option value='$key' $selected>$val</option>";
 		}
-		echo '</select><p class="description">' . __( 'Choose how to sort single docs.', 'organized-docs' ) . '</p>';
+		echo '</select><p class="description">' . __( 'How to sort single docs.', 'organized-docs' ) . '</p>';
+	}
+
+	/**
+	 * Callback function for setting to sort main top-level doc items
+	 * @since 2.1
+	 */
+	public function main_top_sort_by_setting_callback() {
+		$selected_option = get_option('od_main_top_sort_by');
+		$items = array(
+				"custom sort order number"	=> __( 'custom sort order number', 'organized-docs' ),
+				"title"		=> __( 'title - alpha/numeric', 'organized-docs' )
+				);
+		echo "<select id='od_main_top_sort_by' name='od_main_top_sort_by'>";
+		foreach($items as $key => $val) {
+			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
+			echo "<option value='$key' $selected>$val</option>";
+		}
+		echo '</select><p class="description">' . __( 'How to sort the main, top-level Doc items on the main Docs page.', 'organized-docs' ) . '</p>';
 	}
 	
 	/**
@@ -1070,7 +1131,7 @@ class Isa_Organized_Docs{
 	public function single_sort_order_setting_callback() {
 		$selected_option = get_option('od_single_sort_order');
 		$items = array("ASC", "DESC");
-		echo "<select id = 'od_single_sort_order' name = 'od_single_sort_order'>";
+		echo "<select id='od_single_sort_order' name='od_single_sort_order'>";
 
 		foreach($items as $item) {
 			$selected = ( $selected_option == $item ) ? ' selected = "selected"' : '';
@@ -1087,19 +1148,25 @@ class Isa_Organized_Docs{
 		echo '<label for="od_delete_data_on_uninstall"><input name="od_delete_data_on_uninstall" id="od_delete_data_on_uninstall" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_delete_data_on_uninstall' ), false ) . ' /> ' . __( 'Check this box if you would like Organized Docs to completely remove all of its data when the plugin is deleted. This would include all Docs posts, Docs categories, subheadings, and sort order numbers.', 'organized-docs' ) . '</label>';
 	}
 	/**
-	 * Dynamic CSS based on settings and themes
+	 * Optionally add theme compat CSS for 2012, 2013, and 2014.
 	 * @since 1.2.1
 	 */
 	public function dynamic_css() {
 		$theme = wp_get_theme();
-		echo '<style>';
-		if( ( 'Twenty Twelve' == $theme->name ) || ( 'Twenty Twelve' == $theme->parent_theme ) ) {
-			echo '.single-isa_docs #content {margin: 0  !important;padding:0;width: 68% !important;}';
+
+		if( ( 'Twenty Fifteen' == $theme->name ) || ( 'Twenty Fifteen' == $theme->parent_theme ) ) {
+			echo '<style>.widget_docs_section_contents >h3 {border-bottom: 1px solid rgba(51, 51, 51, 0.1)}.widget_docs_section_contents .widget {margin-bottom:20px;}</style>';
+		} 
+		elseif( ( 'Twenty Fourteen' == $theme->name ) || ( 'Twenty Fourteen' == $theme->parent_theme ) ) {
+			echo '<style>#docs-content-sidebar .widget a,#docs-content-sidebar .widget-title{color:inherit}#docs-content-sidebar .widget-title{border-top:5px solid #000;font-weight:900;margin:0 0 18px;padding-top:7px}.single-isa_docs #docs-content-sidebar .widget_docs_section_contents>.widget-title{padding-top:7px}.single-isa_docs #docs-primary{margin:0 0 0 20% !important}#isa-docs-item-title{margin:0 !important}@media screen and (max-device-width:768px){body.single-isa_docs #docs-primary {margin: 0 !important;}body.single-isa_docs #docs-content-sidebar ul {margin-left:0;}.single-isa_docs #docs-content-sidebar .widget.well {padding-left:0;}}</style>';
 		}
-		if( ( 'Twenty Fourteen' == $theme->name ) || ( 'Twenty Fourteen' == $theme->parent_theme ) ) {
-			echo 'body.single-isa_docs .type-isa_docs{margin: 0 0 0 15%;}.tax-isa_docs_category .content-area,.post-type-archive-isa_docs .content-area{padding-top: 0px;}@media screen and (max-device-width:768px){body.single-isa_docs .type-isa_docs {margin: 0;}}';
+		elseif( ( 'Twenty Thirteen' == $theme->name ) || ( 'Twenty Thirteen' == $theme->parent_theme ) ) {
+			echo '<style>.post-type-archive-isa_docs #docs-content,.tax-isa_docs_category #docs-content{margin:0 auto;max-width:604px;width:100%}#docs-content #isa-docs-main-title{margin-top:0}.single-isa_docs #docs-content #isa-docs-item-title{margin-top:20px}#docs-content #isa-docs-item-title,#docs-content #organized-docs-menu,#docs-content .toggle-ul{background-color:rgba(247,245,231,.7)}#docs-content-sidebar .widget_docs_section_contents{padding:20px}#docs-primary #docs-content-sidebar .widget_docs_section_contents>.widget-title{padding-top:0}@media screen and (max-device-width:768px){#docs-content-sidebar>ul{padding-left:0}#organized-docs-menu ul{display:block}}</style>';
 		}
-		echo "</style>";
+		elseif( ( 'Twenty Twelve' == $theme->name ) || ( 'Twenty Twelve' == $theme->parent_theme ) ) {
+			echo '<style>#docs-content #isa-docs-item-title,#docs-content #isa-docs-main-title{margin-top:0}.docs-sub-heading{line-height:1.9}.docs-entry-content{line-height:1.62}#docs-content .entry-title{font-size:28px;line-height:1.9}#docs-primary #docs-content-sidebar .widget_docs_section_contents>.widget-title{padding-top:0}#docs-content-sidebar .widget_docs_section_contents{padding:0 30px}#docs-content .post-navigation a{margin:36px 0}</style>';
+		}
+
 	}
 	/**
 	 * Close comments on Docs
@@ -1193,58 +1260,24 @@ class Isa_Organized_Docs{
 	* @since 2.0.4
 	*/
 	public function inline_js() {
-		$js = '<script>jQuery(document).ready(function(){jQuery( ".docs-sub-heading" ).click(function() {jQuery(this).next().slideToggle();}).next().hide();});</script>';
-		
+		$js = '<script>(function() {var titles = document.querySelectorAll(".docs-sub-heading");var i = titles.length;while (i--) {titles[i].setAttribute("style", "cursor:pointer");}var uls = document.querySelectorAll(".docs-sub-heading + ul");var i = uls.length;while (i--) {uls[i].className = "toggle-ul";}})();function toggleDocs(e){if(e.target&&("docs-sub-heading"==e.target.className||"widget-title docs-sub-heading"==e.target.className)){var t=e.target.nextElementSibling;t.style.display="none"==t.style.display?"block":"none"}}document.addEventListener("click",toggleDocs,!0);</script>';
 		return $js;
 	}
 	
 	/**
-	 * For backwards compatibility, give all single Docs posts a default sort-order number of 99999
-	 * @since 1.1.8
-	 * @todo remove this back compatibility in version 2.1
+	 * For cleanup, remove old options.
+	 * @since 2.1
+	 * @todo remove this function in version 2.4, and del odocs_cleanup_twopointone on uninstall
 	 */
 	public function update_docs_sort_order_post_meta() {
 		global $post;
 		// Run this update only once
-		if ( get_option( 'odocs_update_sortorder_postmeta' ) != 'completed' ) {
-			$args = array(	'post_type' => 'isa_docs', 
-				'posts_per_page' => -1,
-			);
-			$all_docs = get_posts( $args );
-
-			foreach ($all_docs as $doc) {
-				$sort_order_value_check = get_post_meta( $doc->ID, '_odocs_meta_sortorder_key', true );
-
-				// if sort order value is empty, assign a default value
-				if( empty( $sort_order_value_check ) ) {
-					update_post_meta($doc->ID, '_odocs_meta_sortorder_key', 99999);
-				}
-			}
-			wp_reset_postdata();
-
-			// for cleanup, remove these options
-			delete_option( 'isa_organized_docs_plugin_version' );
-			delete_option( 'isa_organized_docs_plugin_name' );
-			delete_option( 'odocs_update_custom_tax_terms_meta' );
-			delete_option( 'odocs_bugfix_update_term_meta' );
-			delete_option( 'odocs_update_sortorder_meta' );
-			delete_option( 'odocs_update_sortorder_post_meta' );
+		if ( get_option( 'odocs_cleanup_twopointone' ) != 'completed' ) {
 			
-			update_option( 'odocs_update_sortorder_postmeta', 'completed' );
-		}
-		
-		/* Backwards compatibility for those who already enabled option to hide each article.
-		 *  Migrate the option to the new hide/list/toggle option.
-		 */
-	 
-		// Run this update only once
-		if ( get_option( 'odocs_update_disable_list_each' ) != 'completed' ) {
-			if ( get_option('od_disable_list_each_single') ) {
-				update_option( 'od_list_toggle', 'hide' );
-				update_option( 'od_widget_list_toggle', 'hide' );
-			}
-			delete_option( 'od_disable_list_each_single' );
-			update_option( 'odocs_update_disable_list_each', 'completed' );
+			delete_option( 'odocs_update_sortorder_postmeta' );
+			delete_option( 'odocs_update_disable_list_each' );
+			
+			update_option( 'odocs_cleanup_twopointone', 'completed' );
 		}
 	}
 }

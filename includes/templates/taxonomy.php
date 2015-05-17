@@ -17,13 +17,13 @@ if ( ! get_option('od_disable_microdata') ) {
 	$itemprop_name = ' itemprop="name"';
 
 } ?>
-<section id="primary" class="content-area" <?php if($schema) echo $schema; ?>>
-<div id="content" class="site-content" role="main">
+<section id="docs-primary" class="docs-content-area" <?php if($schema) echo $schema; ?>>
+<div id="docs-content" class="docs-site-content" role="main">
 <article <?php post_class('docs-archive-template'); ?>>
 <?php do_action( 'organized_docs_content_before' ); ?>
-<div class="entry-content">
+<div class="docs-entry-content">
 <?php global $Isa_Organized_Docs;
-echo $Isa_Organized_Docs->organized_docs_section_heading();
+echo $Isa_Organized_Docs->organized_docs_archive_section_heading();
 echo $Isa_Organized_Docs->organized_docs_content_nav();
 wp_enqueue_style('organized-docs'); ?>
 
@@ -61,12 +61,9 @@ wp_enqueue_style('organized-docs'); ?>
 		// there are subTerms, do list subTerms with all its posts for each subTerm
 		
 		$list_each = get_option('od_list_toggle');
-		if ( 'toggle' == $list_each ) {
-			echo $Isa_Organized_Docs->inline_js();
-		}
 		
 		// sort $termchildren by custom subheading_sort_order numbers
-		$sorted_termchildren = $Isa_Organized_Docs->sort_terms( $termchildren, 'subheading_sort_order' );
+		$sorted_termchildren = $Isa_Organized_Docs->sort_terms_custom( $termchildren, 'subheading_sort_order' );
 
 		foreach ( $sorted_termchildren as $child_id => $order ) {
 
@@ -79,7 +76,11 @@ wp_enqueue_style('organized-docs'); ?>
 			// only list all posts if not hidden by option
 			
 			if( $list_each != 'hide' ) { ?>
-				<ul><?php
+				<ul<?php
+				if ( 'toggle' == $list_each ) {
+					echo ' style="display:none"';
+				}
+				?>><?php
 				global $post;
 				// orderby custom option
 				$single_sort_by = get_option('od_single_sort_by');
@@ -113,13 +114,16 @@ wp_enqueue_style('organized-docs'); ?>
 				<?php } ?>
 				</ul><?php
 			}
-		} // end foreach ( $sorted_termchildren as $child_id => $order )
+		}
+		if ( 'toggle' == $list_each ) {
+			echo $Isa_Organized_Docs->inline_js();
+		}		
 
 	}// end check for empty $termchildren
 	do_action( 'organized_docs_content_bottom' ); ?>
 </div><!-- .isa-docs-archive-content -->
-</div><!-- .entry-content -->
+</div><!-- .docs-entry-content -->
 </article>
-</div><!-- #content -->
-</section><!-- #primary -->
+</div><!-- #docs-content -->
+</section><!-- #docs-primary -->
 <?php get_footer();
