@@ -2,7 +2,7 @@
 /**
  * The template for displaying Organized Docs Single posts.
  * @package	Organized Docs
- * @version 2.0.3
+ * @version 2.1.1
  * @since 2.0
  */
 get_header(); 
@@ -33,7 +33,8 @@ if ( ! get_option('od_disable_microdata') ) {
 	<?php } ?>
 	
 	<header class="docs-entry-header">
-	<h1 class="entry-title" <?php if($itemprop_name) echo $itemprop_name; ?>><?php the_title(); ?></h1>
+		<h1 class="entry-title" <?php if($itemprop_name) echo $itemprop_name; ?>><?php the_title(); ?></h1>
+		<?php $Isa_Organized_Docs->updated_on( 'above' ); ?>
 	</header>
 
 	<div class="docs-entry-content" <?php if($article_body) echo $article_body; ?>>
@@ -50,10 +51,16 @@ if ( ! get_option('od_disable_microdata') ) {
 		) );
 		?>
 	</div><!-- .docs-entry-content -->
-	<?php $Isa_Organized_Docs->organized_docs_post_nav(); 
-	// If comments are open or we have at least one comment, load up the comment template.
-	if ( comments_open() || get_comments_number() ) {
-		comments_template();
+
+	<?php
+	$Isa_Organized_Docs->updated_on( 'below' );
+	$Isa_Organized_Docs->organized_docs_post_nav(); 
+
+	if ( ! get_option( 'od_close_comments' ) ) {
+		// If comments are open or we have at least one comment, load up the comment template.
+		if ( comments_open() || get_comments_number() ) {
+			comments_template();
+		}
 	}
 	?>
 </article><!-- #post-## -->
