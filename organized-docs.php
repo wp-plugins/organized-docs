@@ -1,32 +1,32 @@
 <?php
-/**
- * Plugin Name: Organized Docs
- * Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
- * Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
- * Version: 2.1
- * Author: Isabel Castillo
- * Author URI: http://isabelcastillo.com
- * License: GPL2
- * Text Domain: organized-docs
- * Domain Path: languages
- * 
- * Copyright 2013 - 2015 Isabel Castillo
- * 
- * This file is part of Organized Docs.
- * 
- * Organized Docs is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * any later version.
- *
- * Organized Docs is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Organized Docs. If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+Plugin Name: Organized Docs
+Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
+Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
+Version: 2.1.1
+Author: Isabel Castillo
+Author URI: http://isabelcastillo.com
+License: GPL2
+Text Domain: organized-docs
+Domain Path: languages
+ 
+Copyright 2013 - 2015 Isabel Castillo
+ 
+This file is part of Organized Docs.
+ 
+Organized Docs is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+any later version.
+ 
+Organized Docs is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with Organized Docs. If not, see <http://www.gnu.org/licenses/>.
+*/
 
 if ( ! class_exists( 'Isa_Organized_Docs' ) ) {
 class Isa_Organized_Docs{
@@ -47,7 +47,7 @@ class Isa_Organized_Docs{
 			add_action( 'init', array( $this, 'setup_docs_taxonomy'), 0 );
 			add_action( 'init', array( $this, 'create_docs_cpt') );
 			add_action( 'init', array( $this, 'create_docs_menu_item') );
-			add_action( 'init', array( $this, 'update_docs_sort_order_post_meta' ) );
+			add_action( 'init', array( $this, 'cleanup_old_options' ) );
 			add_action( 'wp_enqueue_scripts', array( $this, 'register_style') );
 			add_action( 'widgets_init', array( $this, 'register_widgets') );
 			add_filter( 'template_include', array( $this, 'docs_template' ) );
@@ -64,7 +64,6 @@ class Isa_Organized_Docs{
 			add_action( 'save_post', array( $this, 'save_postdata' ) );
 			add_action('admin_menu', array( $this, 'submenu_page' ) );
 			add_action('wp_head', array( $this, 'dynamic_css' ) );
-			add_filter( 'the_posts', array( $this, 'close_comments' ) );
     }
 	/** 
 	* Only upon plugin activation, flush rewrite rules for custom post types.
@@ -877,14 +876,6 @@ class Isa_Organized_Docs{
 		);
 	 	register_setting( 'organized-docs-settings', 'od_title_on_nav_links' );
 	 	add_settings_field(
-			'od_enable_manage_comments',
-			__( 'Enable Comments Control', 'organized-docs' ),
-			array( $this, 'enable_manage_comments_setting_callback' ),
-			'organized-docs-settings',
-			'od_single_post_setting_section'
-		);
-	 	register_setting( 'organized-docs-settings', 'od_enable_manage_comments' );
-	 	add_settings_field(
 			'od_close_comments',
 			__( 'Disable Comments on Single Docs?', 'organized-docs' ),
 			array( $this, 'close_comments_setting_callback' ),
@@ -916,6 +907,14 @@ class Isa_Organized_Docs{
 			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_single_sort_order' );
+		add_settings_field(
+			'od_show_updated_date',
+			__( 'Show Updated Date', 'organized-docs' ),
+			array( $this, 'show_updated_date_setting_callback' ),
+			'organized-docs-settings',
+			'od_single_post_setting_section'
+		);
+		register_setting( 'organized-docs-settings', 'od_show_updated_date' );
 	 	add_settings_field(
 			'od_delete_data_on_uninstall',
 			__( 'Remove Data on Uninstall?', 'organized-docs' ),
@@ -1023,25 +1022,11 @@ class Isa_Organized_Docs{
 	}
 
 	/**
-	 * Callback function for setting to enable comments control
-	 * @since 1.2.2
-	 */
-	public function enable_manage_comments_setting_callback() {
-		echo '<label for="od_enable_manage_comments"><input name="od_enable_manage_comments" id="od_enable_manage_comments" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_enable_manage_comments' ), false ) . ' /> ' . __( 'Check this box to turn on the ability to use the next option. This is here because managing comments is heavy. You should turn this off after you see that your next option has taken effect.', 'organized-docs' ) . '</label>';
-
-	}
-
-	/**
 	 * Callback function for setting to disable comments
 	 * @since 1.2.2
 	 */
 	public function close_comments_setting_callback() {
-
-		$html = '<input type="radio" id="od_close_comments_false" name="od_close_comments" value="1"' . checked( 1, get_option( 'od_close_comments' ), false ) . '/>';
-		$html .= '<label for="od_close_comments_false">' . __( 'No', 'organized-docs' ) . '</label><br /><br/ >';
-		$html .= '<input type="radio" id="od_close_comments_true" name="od_close_comments" value="2"' . checked( 2, get_option( 'od_close_comments' ), false ) . '/>';
-		$html .= '<label for="od_close_comments_true">' . __( 'Yes', 'organized-docs' ) . '</label>';
-		echo $html;
+		echo '<label for="od_close_comments"><input name="od_close_comments" id="od_close_comments" type="checkbox" value="1" class="code" ' . checked( 1, get_option( 'od_close_comments' ), false ) . ' /> ' . __( 'Check this box disable comments on all Docs articles. This overrides comment settings on individual Docs posts.', 'organized-docs' ) . '</label>';
 	}
 
 	/**
@@ -1140,6 +1125,26 @@ class Isa_Organized_Docs{
 		echo "</select>";
 		echo '<p class="description">' . __( 'Choose ascending or descending sort order.', 'organized-docs' ) . '</p>';
 	}
+
+	/**
+	 * Callback function for setting to show Updated date
+	 * @since 2.1.1
+	 */
+	public function show_updated_date_setting_callback() {
+		$selected_option = get_option('od_show_updated_date');
+		$items = array(
+				'none'	=> __( 'Do not show the date', 'organized-docs' ),
+				'above'		=> __( 'Show the date above the article', 'organized-docs' ),
+				'below'		=> __( 'Show the date below the article', 'organized-docs' )
+				);
+		echo "<select id='od_show_updated_date' name='od_show_updated_date'>";
+		foreach($items as $key => $val) {
+			$selected = ( $selected_option == $key ) ? ' selected = "selected"' : '';
+			echo "<option value='$key' $selected>$val</option>";
+		}
+		echo '</select><p class="description">' . __( 'Whether to show the last updated date on single Docs articles.', 'organized-docs' ) . '</p>';
+	}
+
 	/**
 	 * Callback function for setting to remove data on uninstall
 	 * @since 1.1.9
@@ -1168,29 +1173,6 @@ class Isa_Organized_Docs{
 		}
 
 	}
-	/**
-	 * Close comments on Docs
-	 * @since 1.2.2
-	 */
-	public function close_comments( $posts ) {
-		if ( !is_single() || ! get_option( 'od_enable_manage_comments' ) ) {
-			return $posts;
-		}
-		if ( 'isa_docs' == get_post_type($posts[0]->ID) ) {
-
-			if ( get_option( 'od_close_comments' ) == 2 ) {
-				$status = 'closed';
-			} else {
-				$status = 'open';
-			}
-
-			$posts[0]->comment_status = $status;
-			$posts[0]->ping_status    = $status;
-			wp_update_post( $posts[0] );
-		}
-		return $posts;
-	}
-	
 	/**
 	* Displays prev/next nav links for single docs
 	* @since 2.0.3
@@ -1253,6 +1235,26 @@ class Isa_Organized_Docs{
 		$out .= '</div></nav>';
 		echo $out;
 	}
+	/**
+	 * Template tag to show the last Updated date on single posts.
+	 * @param string $loc location of the tag, whether above or below the article
+	 */
+	public function updated_on( $loc ) {
+
+		if ( get_option('od_show_updated_date') == $loc ) {
+
+			$time_string = '<time class="updated" datetime="%1$s">%2$s</time>';
+
+			$time_string = sprintf( $time_string,
+				esc_attr( get_the_modified_date( 'c' ) ),
+				get_the_modified_date()
+			);
+			printf( '<span class="updated-on">%1$s %2$s</span>',
+				__( 'Updated on', 'organized-docs' ),
+				$time_string
+			);
+		}
+	}
 
 	/**
 	* Small inline js for optional toggle. Will only be included if toggle option is enabled.
@@ -1266,19 +1268,34 @@ class Isa_Organized_Docs{
 	
 	/**
 	 * For cleanup, remove old options.
-	 * @since 2.1
-	 * @todo remove this function in version 2.4, and del odocs_cleanup_twopointone on uninstall
+	 * @since 2.1.1
 	 */
-	public function update_docs_sort_order_post_meta() {
-		global $post;
+	public function cleanup_old_options() {
 		// Run this update only once
+		// @todo remove this block in version 2.4, and del odocs_cleanup_twopointone on uninstall
 		if ( get_option( 'odocs_cleanup_twopointone' ) != 'completed' ) {
-			
 			delete_option( 'odocs_update_sortorder_postmeta' );
 			delete_option( 'odocs_update_disable_list_each' );
-			
 			update_option( 'odocs_cleanup_twopointone', 'completed' );
 		}
+
+		// Run this update only once
+		// @todo remove this block in version 2.5, and del odocs_cleanup_twopointonepointone on uninstall
+		if ( get_option( 'odocs_cleanup_twopointonepointone' ) != 'completed' ) {
+
+			// migrate the close_comments option from radio to checkbox
+			if ( get_option( 'od_close_comments' ) == 2 ) {
+				update_option( 'od_close_comments', '1' );
+			} else {
+				delete_option( 'od_close_comments' );
+			}
+
+			delete_option( 'od_dont_load_fa' );
+			delete_option( 'od_enable_manage_comments' );
+			
+			update_option( 'odocs_cleanup_twopointonepointone', 'completed' );
+		}
+
 	}
 }
 }

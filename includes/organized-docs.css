@@ -1,11 +1,10 @@
 ﻿/* Universal Docs */
 
-#docs-primary ul {list-style: none;}
-
 #docs-primary a{text-decoration:none}
-
 #docs-primary article {padding-top:0;}
-
+.isa-docs-archive-content ul, #organized-docs-menu ul, #docs-content-sidebar ul {
+	list-style: none;
+}
 
 
 /* Main Docs page */
@@ -35,9 +34,7 @@ ul#organized-docs-main li{margin-left:0;padding-left:1em}
 	font-size:1.7em;
 	
 }
-.single-isa_docs #isa-docs-item-title{
-	margin-top:0;
-}
+
 
 #organized-docs-menu{background-color:#F7F8FA;margin:0 auto 2em 0;max-width:1600px;width:100%}
 
@@ -76,6 +73,11 @@ ul#organized-docs-main li{margin-left:0;padding-left:1em}
 	
 	
 }
+.single-isa_docs #isa-docs-item-title{margin-top:0;}
+
+
+#docs-content .updated-on {margin:16px 0;display:block;font-style:italic;}
+
 #docs-content-sidebar{
 	margin:0;
 	padding:0;
