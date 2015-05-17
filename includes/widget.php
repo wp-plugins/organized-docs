@@ -39,7 +39,7 @@ class DocsSectionContents extends WP_Widget {
 		$doc_categories = wp_get_object_terms( $post->ID, 'isa_docs_category' );
 		
 		if ( ! $doc_categories ) {
-			// cat has not been assigned
+			// cat has not been assigned yet
 			return;
 		}
 			
@@ -51,15 +51,12 @@ class DocsSectionContents extends WP_Widget {
 		$termchildren =  get_term_children( $top_level_parent_term_id, 'isa_docs_category' );
 		
 		// sort $termchildren by custom subheading_sort_order numbers
-		$sorted_termchildren = $Isa_Organized_Docs->sort_terms( $termchildren, 'subheading_sort_order' );
-		
+		$sorted_termchildren = $Isa_Organized_Docs->sort_terms_custom( $termchildren, 'subheading_sort_order' );
+
 		$list_each = get_option('od_widget_list_toggle');
-		if ( 'toggle' == $list_each ) {
-			echo $Isa_Organized_Docs->inline_js();
-		}
 
 		if ($sorted_termchildren) {
-	
+
 			foreach ( $sorted_termchildren as $child_id => $order ) {
 				$termobject = get_term_by( 'id', $child_id, 'isa_docs_category' );
 				
@@ -68,7 +65,11 @@ class DocsSectionContents extends WP_Widget {
 				
 				// only list all posts if not disabled with setting
 				if( $list_each != 'hide' ) { ?>
-				<ul><?php
+				<ul<?php
+				if ( 'toggle' == $list_each ) {
+					echo ' style="display:none"';
+				}
+				?>><?php
 				// nest a loop through each child cat's posts
 				global $post;
 				// orderby custom option
@@ -109,6 +110,9 @@ class DocsSectionContents extends WP_Widget {
 			}
 		}
 		echo $args['after_widget'];
+		if ( 'toggle' == $list_each ) {
+			echo $Isa_Organized_Docs->inline_js();
+		}		
 	}
 
 	/**

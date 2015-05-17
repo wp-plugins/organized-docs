@@ -2,9 +2,9 @@
 Contributors: isabel104
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=me%40isabelcastillo%2ecom
 Tags: documentation, docs, organize documentation, organized documentation, instruction guides, wiki
-Requires at least: 3.9
-Tested up to: 4.2
-Stable Tag: 2.0.4
+Requires at least: 4.0
+Tested up to: 4.2.2
+Stable Tag: 2.1
 License: GNU Version 2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -34,16 +34,40 @@ For support or to report bugs, use the support forum link above, or use [GitHub]
 4.  See [How To Set Up Categories For Docs](http://isabelcastillo.com/docs/how-to-set-up-categories)
 == Frequently Asked Questions ==
 
+= Why is the layout all messed up? = 
+
+The Organized Docs layout is compatible with these default WordPress themes: Twenty Fifteen, Twenty Fourteen, Twenty Thirteen, and Twenty Twelve.
+
+On other themes, the layout may look all messed up. It’s very easy to fix this by copying the template files into your theme. Once you have copied them, make the necessary changes to the HTML to make it match your own theme, while leaving the important Organized Docs loop stuff intact.
+
+See how to [Customize The Docs Template Files](http://isabelcastillo.com/docs/customize-the-docs-template-files).
+
+
 = Why does the Table of Contents widget appear multiple times on the same page? =
 
 This is no longer an issue since version 2.0.
 
 == Screenshots ==
-1. Back-end Admin screen – Organized Docs WordPress Plugin
-2. All Docs For 1 Product
-3. Single docs post with Table of Contents
+1. Main Docs page on 2015 theme showing all main, top-level items/products
+2. All Docs for 1 product on 2015 theme
+3. All Docs for 1 product on 2014 theme
+4. All Docs for 1 product on 2013 theme
+5. A single Docs article with Table of Contents on 2015 theme
+6. A single Docs article with Table of Contents on 2014 theme
+7. A single Docs article with Table of Contents on 2013 theme
+8. Back-end Docs Admin screen
 
 == Changelog ==
+
+= 2.1 =
+* New - All 4 template files have been updated. If you are using a custom template file for Docs in your theme, you must update the file for Docs to work properly. Please see the documentation, under What's New, for an easy link to grab the new template files.
+* New - Option to sort main, top-level Doc items by alphanumerical order.
+* New - The CSS has been rewritten to leave a more neutral style for the Docs nav menu and the Table of Contents widget. The entire layout has been made compatible with Twenty Fifteen theme, as well as remaining compatible with Twenty Fourteen, Twenty Thirteen, and Twenty Twelve. Please see the documentation, under What's New, for a list of all CSS changes.
+* Optimization - The toggle option now uses pure JavaScript. There is no jQuery dependency.
+* Optimization - Use an HTML entity for the print icon instead of Font Awesome. There is no more option to include Font Awesome.
+* Fix - dynamic_css() was adding empty style tag to head in some cases.
+* Tweak - Renamed the function sort_terms to sort_terms_custom.
+* Tweak - Updated .pot translation file.
 
 = 2.0.4 =
 * New - option to toggle the list of individual Docs articles on the top-level category pages.
@@ -161,6 +185,10 @@ Bug fix: Custom sort-order for Categories was not saving.
 * Initial release.
 
 == Upgrade Notice ==
+
+= 2.1 =
+All 4 template files have been updated. If you update, you must also update your custom template files!
+
 = 2.0.4 =
 Removed several PHP warnings that occurred when viewing a single Doc while a category was not assigned to the Doc.
 
@@ -196,3 +224,4 @@ New: set custom sort order for Top-level Doc Items, Sub-headings, and individual
 
 = 1.1.4 =
 Bug fix: Table of Contents Widget was showing up 3 times on Twenty Fourteen theme.
+
