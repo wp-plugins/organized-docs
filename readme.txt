@@ -15,9 +15,11 @@ Easily create organized documentation for multiple products, organized by produc
 Create documentation for multiple items, for example, for multiple software products. This is for you if you need to create documentation for any number of products, and must have the docs organized neatly by product. 
 
 **Built-in SEO**
+
 Documentation articles will have schema.org microdata. It adds **TechArticle** microdata to single Docs, and **CollectionPage** microdata to Docs archives.
 
 **Documentation With a User-Friendly Structure For Your Visitors**
+
 The main "Docs Page" will list all the products. Clicking on a product will take you to the docs only for that product.
 
 Each product's docs are organized into subsections. The subsections list each individual article in that docs section. 
