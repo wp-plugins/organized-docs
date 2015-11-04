@@ -3,7 +3,7 @@
 Plugin Name: Organized Docs
 Plugin URI: http://isabelcastillo.com/docs/category/organized-docs-wordpress-plugin
 Description: Easily create organized documentation for multiple products, organized by product, and by subsections within each product.
-Version: 2.1.1
+Version: 2.3
 Author: Isabel Castillo
 Author URI: http://isabelcastillo.com
 License: GPL2
@@ -241,7 +241,6 @@ class Isa_Organized_Docs{
 	 */
 	public function organized_docs_archive_section_heading() {
 		// get top level parent term on custom taxonomy archive
-		$taxonomy = get_query_var( 'taxonomy' );
 		$queried_object = get_queried_object();
 		$curr_term_id =  (int) $queried_object->term_id;
 		$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
@@ -254,7 +253,7 @@ class Isa_Organized_Docs{
 
 		$heading .= '<h1 id="isa-docs-item-title" class="entry-title"';
 		if ( ! get_option('od_disable_microdata') ) {
-			$heading .= ' itemprop="name"';
+			$heading .= apply_filters( 'od_microdata_name_filter', ' itemprop="name"' );
 		}
 		$heading .= '>';
 		$heading .= $top_term_name . '</h1></a>';
@@ -274,7 +273,6 @@ class Isa_Organized_Docs{
 		if ( is_tax( 'isa_docs_category' ) ) {
 		
 			// need regular current term id, only used to compare w/ top level term id later
-			$taxonomy = get_query_var( 'taxonomy' );
 			$queried_object = get_queried_object();
 			$curr_term_id = (int) $queried_object->term_id;
 			$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
@@ -287,6 +285,7 @@ class Isa_Organized_Docs{
 				$curr_term_id = (int)$first_cat->term_id;
 				// need regular current cat id, only used to compare w/ top level cat id
 				$top_level_parent_term_id = $this->isa_term_top_parent_id( $curr_term_id );
+				do_action( 'organized_docs_microdata_single', $top_level_parent_term_id );
 			} else {
 				// cat is not assigned
 				return;
@@ -471,7 +470,10 @@ class Isa_Organized_Docs{
 			<input type="text" name="term_meta[subheading_sort_order]" id="term_meta[subheading_sort_order]" value="">
 			<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new sub-headings later without having to change all current numbers.', 'organized-docs' ) . ' <em>' . _e( 'Leave blank if this is is not a sub-heading.', 'organized-docs' ) . '</em>'; ?></p>
 		</div>
-	<?php
+		<?php
+		do_action( 'odocs_taxonomy_meta_fields_after' );
+
+
 	}
 
 	/** 
@@ -504,7 +506,8 @@ class Isa_Organized_Docs{
 				<p class="description"><?php _e( 'If this is a Sub-heading, give this Sub-heading a number to order it under its Parent. Number 1 will appear first, while greater numbers appear lower. Numbers do not have to be consecutive; for example, you could number them like, 10, 20, 35, 45, etc. This would leave room in between to insert new sub-headings later without having to change all current numbers.', 'organized-docs' ) . ' <em>'. _e( 'Leave blank if this is is not a sub-heading.', 'organized-docs' ) . '</em>'; ?></p>
 			</td>
 		</tr>
-	<?php
+		<?php
+		do_action( 'odocs_taxonomy_edit_meta_fields_after', $term );
 	}
 
 	/** 
@@ -764,8 +767,8 @@ class Isa_Organized_Docs{
 	 * @since 1.1.9
 	 */
 	public function settings_page_callback() {
-		echo '<div class="wrap"><div id="icon-tools" class="icon32"></div>';
-			echo '<h2>' . __( 'Organized Docs Settings', 'organized-docs' ) . '</h2>'; ?>
+		echo '<div class="wrap">';
+			echo '<h1>' . __( 'Organized Docs Settings', 'organized-docs' ) . '</h1>'; ?>
 			<form method="POST" action="options.php">
 			<?php
 			settings_fields( 'organized-docs-settings' );
@@ -819,7 +822,7 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_rewrite_docs_slug' );
-		add_settings_field(
+	 	add_settings_field(
 			'od_change_main_docs_title',
 			__( 'Change The Main Docs Page Title', 'organized-docs' ),
 			array( $this, 'change_main_docs_title_setting_callback' ),
@@ -827,7 +830,7 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_change_main_docs_title' );
-		add_settings_field(
+	 	add_settings_field(
 			'od_main_top_sort_by',
 			__( 'Main Items Sort Order', 'organized-docs' ),
 			array( $this, 'main_top_sort_by_setting_callback' ),
@@ -835,7 +838,7 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_main_top_sort_by' );
-		add_settings_field(
+	 	add_settings_field(
 			'od_disable_microdata',
 			__( 'Disable Microdata', 'organized-docs' ),
 			array( $this, 'disable_microdata_setting_callback' ),
@@ -843,7 +846,7 @@ class Isa_Organized_Docs{
 			'od_main_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_disable_microdata' );
-		add_settings_field(
+	 	add_settings_field(
 			'od_disable_menu_link',
 			__( 'Disable Docs Menu Link', 'organized-docs' ),
 			array( $this, 'disable_menu_link_setting_callback' ),
@@ -899,7 +902,7 @@ class Isa_Organized_Docs{
 			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_single_sort_by' );
-		add_settings_field(
+	 	add_settings_field(
 			'od_single_sort_order',
 			__( 'Sort Order', 'organized-docs' ),
 			array( $this, 'single_sort_order_setting_callback' ),
@@ -907,7 +910,7 @@ class Isa_Organized_Docs{
 			'od_single_post_setting_section'
 		);
 	 	register_setting( 'organized-docs-settings', 'od_single_sort_order' );
-		add_settings_field(
+	 	add_settings_field(
 			'od_show_updated_date',
 			__( 'Show Updated Date', 'organized-docs' ),
 			array( $this, 'show_updated_date_setting_callback' ),
@@ -932,6 +935,7 @@ class Isa_Organized_Docs{
 		);
 	 	register_setting( 'organized-docs-settings', 'od_widget_list_toggle' );
 	}
+
 	/**
 	 * Main Settings section callback
 	 * @since 1.2.0

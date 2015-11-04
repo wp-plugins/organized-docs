@@ -2,7 +2,7 @@
 /**
  * The template for displaying Organized Docs Single posts.
  * @package	Organized Docs
- * @version 2.1.1
+ * @version 2.2
  * @since 2.0
  */
 get_header(); 
@@ -10,16 +10,29 @@ global $Isa_Organized_Docs;
 $schema = '';
 $itemprop_name = '';
 $article_body = '';
-	
+$schema_date = '';
+$schema_img = '';
+
 if ( ! get_option('od_disable_microdata') ) {
-	$schema = ' itemscope itemtype="http://schema.org/TechArticle"';
-	$itemprop_name = ' itemprop="name"';
-	$article_body = ' itemprop="articleBody"';
+
+	if ( has_post_thumbnail() ) {
+		$image = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ) );
+		$imgurl = $image[0];
+	} else {
+		$imgurl = plugins_url( '/organized-docs.png', dirname( __FILE__ ) );
+	}
+	$schema_img = apply_filters( 'od_single_schema_img', '<meta itemprop="image" content="' . $imgurl . '">' );
+
+	$schema = ' itemscope itemtype="http://schema.org/' . apply_filters( 'od_single_schema_type', 'TechArticle' ) . '"';
+	$itemprop_name = ' itemprop="headline"';
+	$article_body = apply_filters( 'od_single_schema_itemprop_body', ' itemprop="articleBody"' );
+	$schema_date = apply_filters( 'od_single_schema_date', '<meta itemprop="datePublished" content="' . get_the_time('c') . '">' );
 } ?>
 <div id="docs-primary" <?php if($schema) echo $schema; ?>>
 <div id="docs-content" role="main">
 <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-	<?php 
+	<?php
+	do_action( 'organized_docs_single_top' );
 	echo $Isa_Organized_Docs->organized_docs_single_section_heading();
 	echo $Isa_Organized_Docs->organized_docs_content_nav();
 	wp_enqueue_style('organized-docs');
@@ -53,6 +66,7 @@ if ( ! get_option('od_disable_microdata') ) {
 	</div><!-- .docs-entry-content -->
 
 	<?php
+	do_action( 'organized_docs_single_after_content' );
 	$Isa_Organized_Docs->updated_on( 'below' );
 	$Isa_Organized_Docs->organized_docs_post_nav(); 
 
@@ -62,6 +76,8 @@ if ( ! get_option('od_disable_microdata') ) {
 			comments_template();
 		}
 	}
+	echo $schema_date;
+	echo $schema_img;
 	?>
 </article><!-- #post-## -->
 </div><!-- #docs-content -->
